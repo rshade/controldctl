@@ -1,1 +1,6 @@
 /.superpowers/
+/bin/
+/dist/
+*.test
+*.out
+.env
