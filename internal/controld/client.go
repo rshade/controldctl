@@ -77,6 +77,14 @@ type CreateProfileCustomRuleParams = controld.CreateProfileCustomRuleParams
 type UpdateProfileCustomRuleParams = controld.UpdateProfileCustomRuleParams
 type DeleteProfileCustomRuleParams = controld.DeleteProfileCustomRuleParams
 
+// Rule folder-related re-exports for the profiles folders command.
+type Group = controld.Group
+type GroupAction = controld.GroupAction
+type ListProfileRuleFoldersParams = controld.ListProfileRuleFoldersParams
+type CreateProfileRuleFolderParams = controld.CreateProfileRuleFolderParams
+type UpdateProfileRuleFolderParams = controld.UpdateProfileRuleFolderParams
+type DeleteProfileRuleFolderParams = controld.DeleteProfileRuleFolderParams
+
 var errNoAPIToken = errors.New(
 	"no ControlD API token found: pass --api-token, set CONTROLD_API_TOKEN, or set api_token in --config",
 )
