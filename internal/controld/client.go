@@ -55,6 +55,13 @@ type DeleteProfileParams = controld.DeleteProfileParams
 type ProfilesOption = controld.ProfilesOption
 type UpdateProfilesOption = controld.UpdateProfilesOption
 
+// Filter-related re-exports for the profiles filters command.
+type Filter = controld.Filter
+type ListProfileFiltersParams = controld.ListProfileFiltersParams
+type UpdateProfileFilterParams = controld.UpdateProfileFilterParams
+type FilterLevel = controld.FilterLevel
+type FilterResolvers = controld.FilterResolvers
+
 var errNoAPIToken = errors.New(
 	"no ControlD API token found: pass --api-token, set CONTROLD_API_TOKEN, or set api_token in --config",
 )
