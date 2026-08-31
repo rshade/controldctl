@@ -35,10 +35,19 @@ roadmap tracks hardening and the deferred scope from that build.
   services/rules/folders), `mcp-server`/`--mcp`, `__schema`, full CRUD with
   `--dry-run`/`--yes` safety gates. Built via a 10-task plan plus a final
   whole-branch review and one fix wave; every task individually reviewed.
-  See `docs/superpowers/plans/2026-08-29-controldctl-cli-mcp.md` (local,
-  untracked — see Boundary Safeguards) for the full build record. No
-  tracking issue — predates issue-based tracking on this repo. Closed
-  2026-08-31.
+  The full build record is kept locally and gitignored (see Boundary
+  Safeguards), not part of this repo's tracked history. No tracking
+  issue — predates issue-based tracking on this repo. Closed 2026-08-31.
+- [x] Post-v1 infrastructure: renamed the module to `controldctl`, moved
+  to the standard `cmd/controldctl/` layout, pinned `ax-go` to the
+  published v0.5.0 release (dropped a local-path `replace`, verified
+  with a genuine fresh clone that the repo now builds standalone), added
+  `docs/architecture.md`/`docs/CONTRIBUTING.md`/`docs/commands.md`, and
+  set up Renovate, mise, release-please, and GoReleaser — the last of
+  which surfaced and fixed a real bug: `-ldflags` version injection was
+  never actually wired up in `main.go`, so every prior build reported a
+  placeholder version regardless of build flags. No tracking issue —
+  done directly, same session as the initial build. Closed 2026-08-31.
 
 ## Boundary Safeguards
 
