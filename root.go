@@ -27,6 +27,7 @@ func newRootCommand(factory clientFactory) *cobra.Command {
 	root.PersistentFlags().StringVar(&configPath, "config", "", "Hujson config file path with an api_token field")
 
 	root.AddCommand(newDevicesCommand(factory))
+	root.AddCommand(newProfilesCommand(factory))
 
 	return root
 }

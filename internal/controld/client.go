@@ -47,6 +47,14 @@ type IconName = controld.IconName
 // devices.go's --icon default needs this re-exported explicitly.
 const DesktopLinux = controld.DesktopLinux
 
+// Profile-related re-exports for the profiles command.
+type Profile = controld.Profile
+type CreateProfileParams = controld.CreateProfileParams
+type UpdateProfileParams = controld.UpdateProfileParams
+type DeleteProfileParams = controld.DeleteProfileParams
+type ProfilesOption = controld.ProfilesOption
+type UpdateProfilesOption = controld.UpdateProfilesOption
+
 var errNoAPIToken = errors.New(
 	"no ControlD API token found: pass --api-token, set CONTROLD_API_TOKEN, or set api_token in --config",
 )
