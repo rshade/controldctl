@@ -22,5 +22,6 @@
   "MD047": true,
   "MD048": { "style": "backtick" },
   "MD049": { "style": "underscore" },
-  "MD050": { "style": "asterisk" }
+  "MD050": { "style": "asterisk" },
+  "MD060": false
 }

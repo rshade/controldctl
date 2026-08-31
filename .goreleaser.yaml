@@ -1,0 +1,53 @@
+version: 2
+
+project_name: controldctl
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: controldctl
+    main: ./cmd/controldctl
+    binary: controldctl
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+archives:
+  - id: controldctl
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+
+checksum:
+  name_template: "checksums.txt"
+
+# release-please already generates CHANGELOG.md from Conventional Commits and
+# writes it into the GitHub release body when it cuts the release/tag this
+# workflow builds from. Disable GoReleaser's own changelog generation so the
+# release notes aren't duplicated or overwritten with a second, differently
+# formatted changelog.
+changelog:
+  disable: true
+
+release:
+  github:
+    owner: rshade
+    name: controldctl
+  # release-please already created the GitHub release for this tag before
+  # GoReleaser runs. "keep-existing" (GoReleaser's default) leaves that
+  # release's name/body alone and just uploads the build artifacts and
+  # checksums to it, instead of replacing release-please's notes.
+  mode: keep-existing

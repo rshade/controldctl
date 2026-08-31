@@ -13,6 +13,11 @@ import (
 	"github.com/rshade/controldctl/internal/controld"
 )
 
+// version is set via -ldflags "-X main.version=..." at build time (see
+// .goreleaser.yaml). ax.ResolveVersion falls back to Go build metadata when
+// this is empty, e.g. for `go install` or unreleased builds.
+var version string
+
 func main() {
 	os.Exit(run(context.Background(), rewriteMCPFlag(os.Args[1:]), os.Stdin, os.Stdout, os.Stderr))
 }
@@ -38,7 +43,7 @@ func rewriteMCPFlag(args []string) []string {
 // same test seam ax-go's own examples/integration/main.go uses, and it's required
 // for later tests to substitute a bytes.Buffer for stdout.
 func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer) int {
-	resolved := ax.ResolveVersion("")
+	resolved := ax.ResolveVersion(version)
 
 	factory := func(cmd *cobra.Command) (*controld.API, error) {
 		apiToken, _ := cmd.Flags().GetString("api-token")
