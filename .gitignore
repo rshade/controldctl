@@ -1,4 +1,5 @@
 /.superpowers/
+/docs/superpowers/
 /bin/
 /dist/
 *.test
