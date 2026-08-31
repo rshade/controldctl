@@ -10,8 +10,28 @@ import (
 	"github.com/rshade/controld-go-mcp/internal/controld"
 )
 
+type profileOptionPayload struct {
+	PK          string `json:"pk"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Type        string `json:"type"`
+	Value       any    `json:"default_value"`
+	InfoURL     string `json:"info_url"`
+}
+
+func toProfileOptionPayload(o controld.ProfilesOption) profileOptionPayload {
+	return profileOptionPayload{
+		PK:          o.PK,
+		Title:       o.Title,
+		Description: o.Description,
+		Type:        string(o.Type),
+		Value:       o.DefaultValue,
+		InfoURL:     o.InfoURL,
+	}
+}
+
 type profileOptionsListPayload struct {
-	Options []controld.ProfilesOption `json:"options"`
+	Options []profileOptionPayload `json:"options"`
 }
 
 func newProfilesOptionsCommand(factory clientFactory) *cobra.Command {
@@ -37,7 +57,11 @@ func newProfilesOptionsListCommand(factory clientFactory) *cobra.Command {
 			if err != nil {
 				return controld.MapError(cmd.Context(), err)
 			}
-			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), profileOptionsListPayload{Options: options}))
+			payload := profileOptionsListPayload{Options: make([]profileOptionPayload, 0, len(options))}
+			for _, o := range options {
+				payload.Options = append(payload.Options, toProfileOptionPayload(o))
+			}
+			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
 		},
 	}
 }

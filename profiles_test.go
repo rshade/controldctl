@@ -37,6 +37,7 @@ func TestProfilesListWritesEnvelope(t *testing.T) {
 	var envelope struct {
 		Data struct {
 			Profiles []struct {
+				PK   string `json:"pk"`
 				Name string `json:"name"`
 			} `json:"profiles"`
 		} `json:"data"`
@@ -46,6 +47,12 @@ func TestProfilesListWritesEnvelope(t *testing.T) {
 	}
 	if len(envelope.Data.Profiles) != 1 || envelope.Data.Profiles[0].Name != "Home" {
 		t.Fatalf("unexpected profiles: %+v", envelope.Data.Profiles)
+	}
+	if envelope.Data.Profiles[0].PK != "p1" {
+		t.Fatalf("expected lowercase \"pk\" field to decode to \"p1\", got %+v", envelope.Data.Profiles[0])
+	}
+	if bytes.Contains(stdout.Bytes(), []byte(`"PK"`)) {
+		t.Fatalf("expected profile PK to be remapped to lowercase \"pk\", found uppercase \"PK\" in output: %s", stdout.String())
 	}
 }
 

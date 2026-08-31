@@ -10,8 +10,26 @@ import (
 	"github.com/rshade/controld-go-mcp/internal/controld"
 )
 
+type profilePayload struct {
+	PK        string `json:"pk"         ax:"nondeterministic"`
+	Name      string `json:"name"`
+	UpdatedAt int64  `json:"updated_at" ax:"nondeterministic"`
+}
+
+func toProfilePayload(p controld.Profile) profilePayload {
+	return profilePayload{PK: p.PK, Name: p.Name, UpdatedAt: p.Updated.Unix()}
+}
+
 type profilesListPayload struct {
-	Profiles []controld.Profile `json:"profiles"`
+	Profiles []profilePayload `json:"profiles"`
+}
+
+func toProfilesListPayload(profiles []controld.Profile) profilesListPayload {
+	payload := profilesListPayload{Profiles: make([]profilePayload, 0, len(profiles))}
+	for _, p := range profiles {
+		payload.Profiles = append(payload.Profiles, toProfilePayload(p))
+	}
+	return payload
 }
 
 type profileDeletePayload struct {
@@ -33,7 +51,7 @@ func newProfilesCommand(factory clientFactory) *cobra.Command {
 }
 
 func newProfilesListCommand(factory clientFactory) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List all profiles",
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -45,9 +63,11 @@ func newProfilesListCommand(factory clientFactory) *cobra.Command {
 			if err != nil {
 				return controld.MapError(cmd.Context(), err)
 			}
-			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), profilesListPayload{Profiles: profiles}))
+			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), toProfilesListPayload(profiles)))
 		},
 	}
+	ax.WithNonDeterministicFields[profilesListPayload](cmd)
+	return cmd
 }
 
 func newProfilesCreateCommand(factory clientFactory) *cobra.Command {
@@ -80,14 +100,16 @@ func newProfilesCreateCommand(factory clientFactory) *cobra.Command {
 			if err != nil {
 				return controld.MapError(cmd.Context(), err)
 			}
-			if !ran {
-				result = nil
+			var payload profilesListPayload
+			if ran {
+				payload = toProfilesListPayload(result)
 			}
-			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), profilesListPayload{Profiles: result}))
+			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
 		},
 	}
 	cmd.Flags().StringVar(&name, "name", "", "profile name (required)")
 	cmd.Flags().StringVar(&cloneProfileID, "clone-profile-id", "", "existing profile PK to clone from")
+	ax.WithNonDeterministicFields[profilesListPayload](cmd)
 	return cmd
 }
 
@@ -121,14 +143,16 @@ func newProfilesUpdateCommand(factory clientFactory) *cobra.Command {
 			if err != nil {
 				return controld.MapError(cmd.Context(), err)
 			}
-			if !ran {
-				result = nil
+			var payload profilesListPayload
+			if ran {
+				payload = toProfilesListPayload(result)
 			}
-			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), profilesListPayload{Profiles: result}))
+			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
 		},
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK to update (required)")
 	cmd.Flags().StringVar(&name, "name", "", "new profile name")
+	ax.WithNonDeterministicFields[profilesListPayload](cmd)
 	return cmd
 }
 
