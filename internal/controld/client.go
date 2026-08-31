@@ -61,6 +61,7 @@ type ListProfileFiltersParams = controld.ListProfileFiltersParams
 type UpdateProfileFilterParams = controld.UpdateProfileFilterParams
 type FilterLevel = controld.FilterLevel
 type FilterResolvers = controld.FilterResolvers
+type Opt = controld.Opt
 
 var errNoAPIToken = errors.New(
 	"no ControlD API token found: pass --api-token, set CONTROLD_API_TOKEN, or set api_token in --config",

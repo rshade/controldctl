@@ -10,13 +10,48 @@ import (
 	"github.com/rshade/controld-go-mcp/internal/controld"
 )
 
+type filterOptPayload struct {
+	PK    string `json:"pk"`
+	Value any    `json:"value"`
+}
+
+func toFilterOptPayloads(opts []controld.Opt) []filterOptPayload {
+	payloads := make([]filterOptPayload, 0, len(opts))
+	for _, o := range opts {
+		payloads = append(payloads, filterOptPayload{PK: o.PK, Value: o.Value})
+	}
+	return payloads
+}
+
+type filterLevelPayload struct {
+	Title  string             `json:"title"`
+	Type   string             `json:"type"`
+	Name   string             `json:"name"`
+	Status controld.IntBool   `json:"status"`
+	Opt    []filterOptPayload `json:"opt,omitempty"`
+}
+
+func toFilterLevelPayloads(levels []controld.FilterLevel) []filterLevelPayload {
+	payloads := make([]filterLevelPayload, 0, len(levels))
+	for _, l := range levels {
+		payloads = append(payloads, filterLevelPayload{
+			Title:  l.Title,
+			Type:   l.Type,
+			Name:   l.Name,
+			Status: l.Status,
+			Opt:    toFilterOptPayloads(l.Opt),
+		})
+	}
+	return payloads
+}
+
 type filterPayload struct {
 	PK          string                    `json:"pk"`
 	Name        string                    `json:"name"`
 	Description string                    `json:"description"`
 	Additional  *string                   `json:"additional,omitempty"`
 	Sources     []string                  `json:"sources"`
-	Levels      []controld.FilterLevel    `json:"levels,omitempty"`
+	Levels      []filterLevelPayload      `json:"levels,omitempty"`
 	Status      controld.IntBool          `json:"status"`
 	Resolvers   *controld.FilterResolvers `json:"resolvers,omitempty"`
 }
@@ -28,7 +63,7 @@ func toFilterPayload(f controld.Filter) filterPayload {
 		Description: f.Description,
 		Additional:  f.Additional,
 		Sources:     f.Sources,
-		Levels:      f.Levels,
+		Levels:      toFilterLevelPayloads(f.Levels),
 		Status:      f.Status,
 		Resolvers:   f.Resolvers,
 	}

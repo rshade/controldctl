@@ -56,6 +56,70 @@ func TestProfilesFiltersListDefaultsToNative(t *testing.T) {
 	}
 }
 
+func TestProfilesFiltersListRemapsNestedOptPKCasing(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/profiles/p1/filters" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"success": true, "body": {"filters": [{
+			"PK": "custom1",
+			"name": "Custom",
+			"description": "d",
+			"sources": [],
+			"status": 1,
+			"levels": [
+				{"title": "Strict", "type": "toggle", "name": "strict", "status": 1,
+				 "opt": [{"PK": "opt1", "value": true}]}
+			]
+		}]}}`))
+	}))
+	defer server.Close()
+
+	root := newRootCommand(testFactory(t, server))
+	root.SetArgs([]string{"profiles", "filters", "list", "--profile-id=p1", "--format=json"})
+
+	var stdout, stderr bytes.Buffer
+	code := ax.Execute(context.Background(), root,
+		ax.WithStdout(&stdout),
+		ax.WithStderr(&stderr),
+		ax.WithEnv(func(string) string { return "" }),
+	)
+	if code != ax.ExitSuccess {
+		t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr.String())
+	}
+
+	var envelope struct {
+		Data struct {
+			Filters []struct {
+				PK     string `json:"pk"`
+				Levels []struct {
+					Opt []struct {
+						PK string `json:"pk"`
+					} `json:"opt"`
+				} `json:"levels"`
+			} `json:"filters"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(stdout.Bytes(), &envelope); err != nil {
+		t.Fatalf("unmarshal stdout %q: %v", stdout.String(), err)
+	}
+	if len(envelope.Data.Filters) != 1 {
+		t.Fatalf("unexpected filters: %+v", envelope.Data.Filters)
+	}
+	filter := envelope.Data.Filters[0]
+	if filter.PK != "custom1" {
+		t.Fatalf("expected filter pk %q, got %q", "custom1", filter.PK)
+	}
+	if len(filter.Levels) != 1 || len(filter.Levels[0].Opt) != 1 || filter.Levels[0].Opt[0].PK != "opt1" {
+		t.Fatalf("expected nested opt pk %q to decode via lowercase \"pk\", got %+v", "opt1", filter.Levels)
+	}
+	if bytes.Contains(stdout.Bytes(), []byte(`"PK"`)) {
+		t.Fatalf("expected all filter PK fields (including nested levels[].opt[].PK) to be remapped to "+
+			"lowercase \"pk\", found uppercase \"PK\" in output: %s", stdout.String())
+	}
+}
+
 func TestProfilesFiltersListExternalSource(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/profiles/p1/filters/external" {
