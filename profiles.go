@@ -49,6 +49,7 @@ func newProfilesCommand(factory clientFactory) *cobra.Command {
 	cmd.AddCommand(newProfilesOptionsCommand(factory))
 	cmd.AddCommand(newProfilesFiltersCommand(factory))
 	cmd.AddCommand(newProfilesServicesCommand(factory))
+	cmd.AddCommand(newProfilesRulesCommand(factory))
 	return cmd
 }
 

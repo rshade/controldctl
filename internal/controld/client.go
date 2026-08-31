@@ -69,6 +69,14 @@ type ListProfileServicesParams = controld.ListProfileServicesParams
 type UpdateProfileServiceParams = controld.UpdateProfileServiceParams
 type Action = controld.Action
 
+// Custom rule-related re-exports for the profiles rules command.
+type Rule = controld.Rule
+type CustomRule = controld.CustomRule
+type ListProfileCustomRulesParams = controld.ListProfileCustomRulesParams
+type CreateProfileCustomRuleParams = controld.CreateProfileCustomRuleParams
+type UpdateProfileCustomRuleParams = controld.UpdateProfileCustomRuleParams
+type DeleteProfileCustomRuleParams = controld.DeleteProfileCustomRuleParams
+
 var errNoAPIToken = errors.New(
 	"no ControlD API token found: pass --api-token, set CONTROLD_API_TOKEN, or set api_token in --config",
 )
