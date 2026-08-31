@@ -63,6 +63,12 @@ type FilterLevel = controld.FilterLevel
 type FilterResolvers = controld.FilterResolvers
 type Opt = controld.Opt
 
+// Service-related re-exports for the profiles services command.
+type ProfileService = controld.ProfileService
+type ListProfileServicesParams = controld.ListProfileServicesParams
+type UpdateProfileServiceParams = controld.UpdateProfileServiceParams
+type Action = controld.Action
+
 var errNoAPIToken = errors.New(
 	"no ControlD API token found: pass --api-token, set CONTROLD_API_TOKEN, or set api_token in --config",
 )
