@@ -2,11 +2,9 @@ module github.com/rshade/controldctl
 
 go 1.26.7
 
-replace github.com/rshade/ax-go => ../ax-go
-
 require (
 	github.com/baptistecdr/controld-go v0.0.10
-	github.com/rshade/ax-go v0.0.0-00010101000000-000000000000
+	github.com/rshade/ax-go v0.5.0
 	github.com/spf13/cobra v1.10.2
 )
 
