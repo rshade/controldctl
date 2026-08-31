@@ -34,6 +34,19 @@ const (
 	Redirect = controld.Redirect
 )
 
+// Device-related re-exports for the devices command.
+type Device = controld.Device
+type CreateDeviceParams = controld.CreateDeviceParams
+type UpdateDeviceParams = controld.UpdateDeviceParams
+type DeleteDeviceParams = controld.DeleteDeviceParams
+type DeviceTypes = controld.DeviceTypes
+type IconName = controld.IconName
+
+// A type alias re-exports the type but NOT its package-level constants — Go
+// constants aren't attached to a type in a way aliasing carries forward, so
+// devices.go's --icon default needs this re-exported explicitly.
+const DesktopLinux = controld.DesktopLinux
+
 var errNoAPIToken = errors.New(
 	"no ControlD API token found: pass --api-token, set CONTROLD_API_TOKEN, or set api_token in --config",
 )

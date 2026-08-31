@@ -26,6 +26,8 @@ func newRootCommand(factory clientFactory) *cobra.Command {
 	root.PersistentFlags().StringVar(&apiToken, "api-token", "", "ControlD API token (overrides CONTROLD_API_TOKEN and --config)")
 	root.PersistentFlags().StringVar(&configPath, "config", "", "Hujson config file path with an api_token field")
 
+	root.AddCommand(newDevicesCommand(factory))
+
 	return root
 }
 
