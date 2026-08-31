@@ -7,7 +7,7 @@ API, built on [ax-go](https://github.com/rshade/ax-go) and
 ## Install
 
 ```bash
-go build -o bin/controldctl .
+go build -o bin/controldctl ./cmd/controldctl
 ```
 
 ## Authenticate
@@ -78,7 +78,7 @@ machine mode and returns its JSON payload.
 ## Development
 
 ```bash
-make build   # go build -o bin/controldctl .
+make build   # go build -o bin/controldctl ./cmd/controldctl
 make test    # go test ./...
 make lint    # go vet ./... && gofmt -l .
 make fmt     # gofmt -w .
