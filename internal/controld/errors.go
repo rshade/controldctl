@@ -3,9 +3,27 @@ package controld
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/baptistecdr/controld-go"
 	"github.com/rshade/ax-go"
+)
+
+// These substrings match controld-go@v0.0.10's own internal retry loop
+// (controld.go, makeRequestWithAuthTypeAndHeadersComplete): it intercepts
+// every HTTP 429 and 5xx response BEFORE the typed-error construction that
+// the errors.As checks below rely on, retries internally, then gives up and
+// returns a plain error built from these exact strings — never a
+// *controld.RatelimitError or *controld.ServiceError. So those two
+// errors.As checks never fire against a real HTTP response; they only pass
+// in the unit tests here, which hand-construct the typed errors directly.
+// This is a fragile-but-contained workaround: if controld-go is upgraded and
+// starts returning typed errors for these cases, these checks become
+// redundant but harmless — reverify the substrings against the new version's
+// source before relying on that being true.
+const (
+	vendorRateLimitRetriesExhausted = "exceeded available rate limit retries"
+	vendorServiceUnavailableRetry   = "please try again later"
 )
 
 // defaultRateLimitRetrySeconds is advised when controld-go surfaces a
@@ -82,6 +100,27 @@ func MapError(ctx context.Context, err error) error {
 			ax.WithActionableFix("check the command's arguments against ControlD's API requirements"),
 			ax.WithRetryable(false),
 			ax.WithErrorExitCode(ax.ExitValidation),
+		)
+	}
+
+	// See the vendorRateLimitRetriesExhausted / vendorServiceUnavailableRetry
+	// doc comment above: these catch the plain errors controld-go's own retry
+	// loop returns after giving up, which the errors.As checks above never
+	// match against a real HTTP response.
+	if strings.Contains(err.Error(), vendorRateLimitRetriesExhausted) {
+		return ax.NewError(ctx, "controld_rate_limited", err.Error(),
+			ax.WithActionableFix("wait before retrying"),
+			ax.WithRetryable(true),
+			ax.WithRetryAfterSeconds(defaultRateLimitRetrySeconds),
+			ax.WithErrorExitCode(ax.ExitNetwork),
+		)
+	}
+
+	if strings.Contains(err.Error(), vendorServiceUnavailableRetry) {
+		return ax.NewError(ctx, "controld_upstream_unavailable", err.Error(),
+			ax.WithActionableFix("retry after a short wait or check ControlD's status page"),
+			ax.WithRetryable(true),
+			ax.WithErrorExitCode(ax.ExitNetwork),
 		)
 	}
 

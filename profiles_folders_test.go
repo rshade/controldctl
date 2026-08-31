@@ -201,6 +201,78 @@ func TestProfilesFoldersUpdateWritesEnvelope(t *testing.T) {
 	}
 }
 
+func TestProfilesFoldersUpdatePartialFlagsOmitUnsetFields(t *testing.T) {
+	t.Run("--do alone omits status from the request body", func(t *testing.T) {
+		var body map[string]json.RawMessage
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode request body: %v", err)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"success": true, "body": {"groups": [` +
+				`{"PK": 42, "group": "Ads", "action": {"status": 1, "do": 1}, "count": 0}]}}`))
+		}))
+		defer server.Close()
+
+		root := newRootCommand(testFactory(t, server))
+		root.SetArgs([]string{
+			"profiles", "folders", "update",
+			"--profile-id=p1", "--folder-id=f1", "--do=1", "--format=json",
+		})
+
+		var stdout, stderr bytes.Buffer
+		code := ax.Execute(context.Background(), root,
+			ax.WithStdout(&stdout),
+			ax.WithStderr(&stderr),
+			ax.WithEnv(func(string) string { return "" }),
+		)
+		if code != ax.ExitSuccess {
+			t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr.String())
+		}
+		if _, ok := body["status"]; ok {
+			t.Fatalf("expected request body to omit \"status\" when only --do is passed, got: %+v", body)
+		}
+		if _, ok := body["do"]; !ok {
+			t.Fatalf("expected request body to contain \"do\", got: %+v", body)
+		}
+	})
+
+	t.Run("--enabled alone omits do from the request body", func(t *testing.T) {
+		var body map[string]json.RawMessage
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode request body: %v", err)
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"success": true, "body": {"groups": [` +
+				`{"PK": 42, "group": "Ads", "action": {"status": 0}, "count": 0}]}}`))
+		}))
+		defer server.Close()
+
+		root := newRootCommand(testFactory(t, server))
+		root.SetArgs([]string{
+			"profiles", "folders", "update",
+			"--profile-id=p1", "--folder-id=f1", "--enabled=false", "--format=json",
+		})
+
+		var stdout, stderr bytes.Buffer
+		code := ax.Execute(context.Background(), root,
+			ax.WithStdout(&stdout),
+			ax.WithStderr(&stderr),
+			ax.WithEnv(func(string) string { return "" }),
+		)
+		if code != ax.ExitSuccess {
+			t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr.String())
+		}
+		if _, ok := body["do"]; ok {
+			t.Fatalf("expected request body to omit \"do\" when only --enabled is passed, got: %+v", body)
+		}
+		if _, ok := body["status"]; !ok {
+			t.Fatalf("expected request body to contain \"status\", got: %+v", body)
+		}
+	})
+}
+
 func TestProfilesFoldersUpdateRequiresProfileIDAndFolderID(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		t.Fatal("unexpected HTTP call for missing required flags")

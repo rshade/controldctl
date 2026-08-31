@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/baptistecdr/controld-go"
@@ -129,4 +130,57 @@ func TestMapErrorClassifiesWrappedUpstreamErrors(t *testing.T) {
 			t.Fatalf("expected the original error back, got %v", MapError(ctx, plain))
 		}
 	})
+}
+
+// TestMapErrorHandlesVendorRetryExhaustion exercises controld-go's real HTTP
+// retry loop (not a hand-built typed error): the loop intercepts 429s and
+// 5xxs itself, retries a couple of times against a fake server, then gives up
+// and returns a plain error. This is the regression test for that class of
+// bug — the table above only proves MapError's errors.As branches work
+// against typed errors constructed directly, which never happens for a real
+// rate-limit or outage response.
+func TestMapErrorHandlesVendorRetryExhaustion(t *testing.T) {
+	ctx := context.Background()
+
+	tests := []struct {
+		name       string
+		statusCode int
+	}{
+		{"repeated 500s exhaust the vendor's retries", http.StatusInternalServerError},
+		{"repeated 429s exhaust the vendor's retries", http.StatusTooManyRequests},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tt.statusCode)
+			}))
+			defer server.Close()
+
+			client, err := controld.New("test-token",
+				controld.BaseURL(server.URL),
+				controld.UsingRetryPolicy(1, 0, 0), // 1 retry, no backoff, to keep the test fast
+			)
+			if err != nil {
+				t.Fatalf("construct client: %v", err)
+			}
+
+			_, callErr := client.ListDevices(ctx)
+			if callErr == nil {
+				t.Fatalf("expected an error after the vendor's retries against repeated HTTP %d responses", tt.statusCode)
+			}
+
+			mapped := MapError(ctx, callErr)
+			var axErr *ax.Error
+			if !errors.As(mapped, &axErr) {
+				t.Fatalf("expected *ax.Error, got %T: %v", mapped, mapped)
+			}
+			if axErr.ExitCode() != ax.ExitNetwork {
+				t.Errorf("exit code = %d, want %d (ExitNetwork)", axErr.ExitCode(), ax.ExitNetwork)
+			}
+			if axErr.Retryable == nil || !*axErr.Retryable {
+				t.Errorf("retryable = %v, want true", axErr.Retryable)
+			}
+		})
+	}
 }

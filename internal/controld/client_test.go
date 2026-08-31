@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/rshade/ax-go"
 )
 
 func fakeGetenv(values map[string]string) func(string) string {
@@ -60,6 +62,9 @@ func TestResolveAPITokenPrecedence(t *testing.T) {
 		_, err := resolveAPIToken(ctx, "", "", fakeGetenv(nil))
 		if err == nil {
 			t.Fatal("expected an error, got nil")
+		}
+		if got := ax.ErrorExitCode(err); got != ax.ExitAuth {
+			t.Fatalf("ax.ErrorExitCode(err) = %d, want %d (ExitAuth)", got, ax.ExitAuth)
 		}
 	})
 }

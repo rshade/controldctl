@@ -214,11 +214,12 @@ func newDevicesDeleteCommand(factory clientFactory) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&deviceID, "device-id", "", "device PK to delete (required)")
+	ax.WithNonDeterministicFields[deviceDeletePayload](cmd)
 	return cmd
 }
 
 func newDevicesTypesCommand(factory clientFactory) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "types",
 		Short: "List available device types and icons",
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -233,4 +234,6 @@ func newDevicesTypesCommand(factory clientFactory) *cobra.Command {
 			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), types))
 		},
 	}
+	ax.WithNonDeterministicFields[controld.DeviceTypes](cmd)
+	return cmd
 }

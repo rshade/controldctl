@@ -88,6 +88,7 @@ func newProfilesRulesListCommand(factory clientFactory) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK (required)")
 	cmd.Flags().StringVar(&folderID, "folder-id", "", "rule folder ID (required)")
+	ax.WithNonDeterministicFields[rulesListPayload](cmd)
 	return cmd
 }
 
@@ -136,6 +137,7 @@ func newProfilesRulesCreateCommand(factory clientFactory) *cobra.Command {
 	cmd.Flags().StringVar(&hostnames, "hostnames", "", "comma-separated hostnames (required)")
 	cmd.Flags().IntVar(&do, "do", int(controld.Block), "action: 0=block, 1=bypass, 2=spoof, 3=redirect")
 	cmd.Flags().BoolVar(&enabled, "enabled", true, "enable (true) or disable (false) the rule")
+	ax.WithNonDeterministicFields[customRulesPayload](cmd)
 	return cmd
 }
 
@@ -184,6 +186,7 @@ func newProfilesRulesUpdateCommand(factory clientFactory) *cobra.Command {
 	cmd.Flags().StringVar(&hostnames, "hostnames", "", "comma-separated hostnames (required)")
 	cmd.Flags().IntVar(&do, "do", int(controld.Block), "action: 0=block, 1=bypass, 2=spoof, 3=redirect")
 	cmd.Flags().BoolVar(&enabled, "enabled", true, "enable (true) or disable (false) the rule")
+	ax.WithNonDeterministicFields[customRulesPayload](cmd)
 	return cmd
 }
 
@@ -236,5 +239,6 @@ func newProfilesRulesDeleteCommand(factory clientFactory) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK (required)")
 	cmd.Flags().StringVar(&hostname, "hostname", "", "hostname to remove the rule for (required)")
+	ax.WithNonDeterministicFields[ruleDeletePayload](cmd)
 	return cmd
 }

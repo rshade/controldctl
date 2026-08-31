@@ -78,6 +78,7 @@ func newProfilesServicesListCommand(factory clientFactory) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK (required)")
+	ax.WithNonDeterministicFields[servicesListPayload](cmd)
 	return cmd
 }
 
@@ -126,5 +127,6 @@ func newProfilesServicesUpdateCommand(factory clientFactory) *cobra.Command {
 	cmd.Flags().StringVar(&service, "service", "", "service PK, e.g. netflix (required)")
 	cmd.Flags().IntVar(&do, "do", int(controld.Block), "action: 0=block, 1=bypass, 2=spoof, 3=redirect")
 	cmd.Flags().BoolVar(&enabled, "enabled", true, "enable (true) or disable (false) the rule")
+	ax.WithNonDeterministicFields[serviceUpdatePayload](cmd)
 	return cmd
 }

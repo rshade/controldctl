@@ -45,7 +45,7 @@ func newProfilesOptionsCommand(factory clientFactory) *cobra.Command {
 }
 
 func newProfilesOptionsListCommand(factory clientFactory) *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List available profile options and their current values",
 		RunE: func(cmd *cobra.Command, _ []string) error {
@@ -64,6 +64,8 @@ func newProfilesOptionsListCommand(factory clientFactory) *cobra.Command {
 			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
 		},
 	}
+	ax.WithNonDeterministicFields[profileOptionsListPayload](cmd)
+	return cmd
 }
 
 type profileOptionUpdatePayload struct {
@@ -111,7 +113,8 @@ func newProfilesOptionsUpdateCommand(factory clientFactory) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK (required)")
 	cmd.Flags().StringVar(&name, "name", "", "option name (required)")
-	cmd.Flags().BoolVar(&status, "enabled", false, "enable or disable the option")
+	cmd.Flags().BoolVar(&status, "enabled", true, "enable or disable the option")
 	cmd.Flags().StringVar(&value, "value", "", "option value, if the option takes one")
+	ax.WithNonDeterministicFields[profileOptionUpdatePayload](cmd)
 	return cmd
 }

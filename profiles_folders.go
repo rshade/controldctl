@@ -154,13 +154,17 @@ func newProfilesFoldersUpdateCommand(factory clientFactory) *cobra.Command {
 				return err
 			}
 
-			doVal := controld.DoType(do)
-			statusVal := controld.IntBool(enabled)
 			params := controld.UpdateProfileRuleFolderParams{
 				ProfileID: profileID,
 				FolderID:  folderID,
-				Do:        &doVal,
-				Status:    &statusVal,
+			}
+			if cmd.Flags().Changed("do") {
+				doVal := controld.DoType(do)
+				params.Do = &doVal
+			}
+			if cmd.Flags().Changed("enabled") {
+				statusVal := controld.IntBool(enabled)
+				params.Status = &statusVal
 			}
 
 			var result []controld.Group
@@ -236,5 +240,6 @@ func newProfilesFoldersDeleteCommand(factory clientFactory) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK (required)")
 	cmd.Flags().StringVar(&folderID, "folder-id", "", "folder ID to delete (required)")
+	ax.WithNonDeterministicFields[folderDeletePayload](cmd)
 	return cmd
 }

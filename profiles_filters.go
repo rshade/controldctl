@@ -127,6 +127,7 @@ func newProfilesFiltersListCommand(factory clientFactory) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK (required)")
 	cmd.Flags().StringVar(&source, "source", "native", "native or external")
+	ax.WithNonDeterministicFields[filtersListPayload](cmd)
 	return cmd
 }
 
@@ -172,5 +173,6 @@ func newProfilesFiltersUpdateCommand(factory clientFactory) *cobra.Command {
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK (required)")
 	cmd.Flags().StringVar(&filter, "filter", "", "filter PK, e.g. ads (required)")
 	cmd.Flags().BoolVar(&enabled, "enabled", true, "enable (true) or disable (false) the filter")
+	ax.WithNonDeterministicFields[filterUpdatePayload](cmd)
 	return cmd
 }

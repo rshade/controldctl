@@ -28,9 +28,12 @@ controldctl mcp-server                 # run as an MCP server over stdio
 controldctl --mcp                      # same thing, shorter
 ```
 
-`--format` controls output: `json` for a machine-readable envelope, `human`
-for a formatted table. If omitted, `controldctl` picks a default based on
-whether stdout is a TTY.
+Every command always writes the same JSON envelope, regardless of `--format`.
+`--format` only controls confirmation-prompt behavior: `json` runs in machine
+mode, where a confirmation-gated command (e.g. any `delete`) fails with a
+`confirmation_required` error unless `--yes` is also passed; `human` runs in
+interactive mode, prompting `[y/N]` instead. If `--format` is omitted,
+`controldctl` picks a default based on whether stdout is a TTY.
 
 Every mutating command supports `--dry-run`, which emits the response
 envelope without making the underlying API call. Every `delete` command (and

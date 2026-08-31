@@ -205,5 +205,6 @@ func newProfilesDeleteCommand(factory clientFactory) *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK to delete (required)")
+	ax.WithNonDeterministicFields[profileDeletePayload](cmd)
 	return cmd
 }

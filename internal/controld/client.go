@@ -9,7 +9,6 @@ package controld
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/baptistecdr/controld-go"
@@ -85,10 +84,6 @@ type CreateProfileRuleFolderParams = controld.CreateProfileRuleFolderParams
 type UpdateProfileRuleFolderParams = controld.UpdateProfileRuleFolderParams
 type DeleteProfileRuleFolderParams = controld.DeleteProfileRuleFolderParams
 
-var errNoAPIToken = errors.New(
-	"no ControlD API token found: pass --api-token, set CONTROLD_API_TOKEN, or set api_token in --config",
-)
-
 type fileConfig struct {
 	APIToken string `json:"api_token"`
 }
@@ -132,5 +127,8 @@ func resolveAPIToken(ctx context.Context, apiTokenFlag, configPath string, geten
 			return cfg.APIToken, nil
 		}
 	}
-	return "", errNoAPIToken
+	return "", ax.NewError(ctx, "controld_no_api_token",
+		"no ControlD API token found: pass --api-token, set CONTROLD_API_TOKEN, or set api_token in --config",
+		ax.WithErrorExitCode(ax.ExitAuth),
+	)
 }
