@@ -7,7 +7,7 @@ import (
 
 	"github.com/rshade/ax-go"
 
-	"github.com/rshade/controld-go-mcp/internal/controld"
+	"github.com/rshade/controldctl/internal/controld"
 )
 
 // groupPayload remaps controld.Group's uppercase "PK" json tag to lowercase.

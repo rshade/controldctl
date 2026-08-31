@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/rshade/controld-go-mcp/internal/controld"
+	"github.com/rshade/controldctl/internal/controld"
 )
 
 type clientFactory func(cmd *cobra.Command) (*controld.API, error)

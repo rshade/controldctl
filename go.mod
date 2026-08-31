@@ -1,4 +1,4 @@
-module github.com/rshade/controld-go-mcp
+module github.com/rshade/controldctl
 
 go 1.26.7
 

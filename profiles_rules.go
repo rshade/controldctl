@@ -8,7 +8,7 @@ import (
 
 	"github.com/rshade/ax-go"
 
-	"github.com/rshade/controld-go-mcp/internal/controld"
+	"github.com/rshade/controldctl/internal/controld"
 )
 
 // rulePayload remaps controld.Rule's uppercase "PK" json tag to lowercase.

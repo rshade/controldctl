@@ -10,7 +10,7 @@ import (
 	"github.com/rshade/ax-go"
 	"github.com/rshade/ax-go/mcp"
 
-	"github.com/rshade/controld-go-mcp/internal/controld"
+	"github.com/rshade/controldctl/internal/controld"
 )
 
 func main() {

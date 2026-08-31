@@ -12,7 +12,7 @@ import (
 
 	"github.com/rshade/ax-go"
 
-	"github.com/rshade/controld-go-mcp/internal/controld"
+	"github.com/rshade/controldctl/internal/controld"
 )
 
 func testFactory(t *testing.T, server *httptest.Server) clientFactory {
