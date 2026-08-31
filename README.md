@@ -22,7 +22,7 @@ Hujson file with an `api_token` field. Precedence is `--api-token` >
 controldctl devices list --format=json
 controldctl profiles list --format=json
 controldctl profiles filters list --profile-id=<id>
-controldctl profiles rules create --profile-id=<id> --folder-id=<id> \
+controldctl profiles rules create --profile-id=<id> \
   --hostnames=ads.example.com --do=0
 controldctl mcp-server                 # run as an MCP server over stdio
 controldctl --mcp                      # same thing, shorter
