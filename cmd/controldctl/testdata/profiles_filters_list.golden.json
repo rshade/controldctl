@@ -1,0 +1,1 @@
+{"data":{"filters":[{"pk":"custom1","name":"Custom","description":"d","sources":[],"levels":[{"title":"Strict","type":"toggle","name":"strict","status":1,"opt":[{"pk":"opt1","value":true}]}],"status":1}]},"meta":{"trace_id":"MASKED","span_id":"MASKED","idempotency_key":"MASKED"}}

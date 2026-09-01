@@ -9,6 +9,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/rshade/ax-go"
+
 	"github.com/rshade/controldctl/internal/controld"
 )
 
@@ -43,4 +45,9 @@ func promptForConfirmation(cmd *cobra.Command, subject string) (bool, error) {
 	}
 	response = strings.TrimSpace(response)
 	return strings.EqualFold(response, "y") || strings.EqualFold(response, "yes"), nil
+}
+
+func validationError(cmd *cobra.Command, msg, fix string) error {
+	return ax.NewError(cmd.Context(), "validation_error", msg,
+		ax.WithActionableFix(fix), ax.WithErrorExitCode(ax.ExitValidation))
 }

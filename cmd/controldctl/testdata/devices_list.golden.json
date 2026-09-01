@@ -1,0 +1,1 @@
+{"data":{"devices":[{"pk":"dev1","device_id":"abc123","name":"laptop","status":1,"profile_pk":"p1","profile_name":"Home","created_at":1700000000}]},"meta":{"trace_id":"MASKED","span_id":"MASKED","idempotency_key":"MASKED"}}

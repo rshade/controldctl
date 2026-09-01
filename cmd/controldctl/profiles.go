@@ -82,8 +82,8 @@ func newProfilesCreateCommand(factory clientFactory) *cobra.Command {
 		Short: "Create a profile",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if name == "" {
-				return ax.NewError(cmd.Context(), "validation_error", "--name is required",
-					ax.WithErrorExitCode(ax.ExitValidation))
+				return validationError(cmd, "--name is required",
+					"pass --name with the profile name")
 			}
 			client, err := factory(cmd)
 			if err != nil {
@@ -118,15 +118,17 @@ func newProfilesCreateCommand(factory clientFactory) *cobra.Command {
 }
 
 func newProfilesUpdateCommand(factory clientFactory) *cobra.Command {
-	var profileID, name string
+	var profileID, name, lockMessage, password string
+	var disableTTL int
+	var lockStatus bool
 
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Update a profile",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if profileID == "" {
-				return ax.NewError(cmd.Context(), "validation_error", "--profile-id is required",
-					ax.WithErrorExitCode(ax.ExitValidation))
+				return validationError(cmd, "--profile-id is required",
+					"pass --profile-id with the profile PK")
 			}
 			client, err := factory(cmd)
 			if err != nil {
@@ -136,6 +138,19 @@ func newProfilesUpdateCommand(factory clientFactory) *cobra.Command {
 			params := controld.UpdateProfileParams{ProfileID: profileID}
 			if name != "" {
 				params.Name = &name
+			}
+			if cmd.Flags().Changed("disable-ttl") {
+				params.DisableTTL = &disableTTL
+			}
+			if cmd.Flags().Changed("lock-status") {
+				v := controld.IntBool(lockStatus)
+				params.LockStatus = &v
+			}
+			if lockMessage != "" {
+				params.LockMessage = &lockMessage
+			}
+			if password != "" {
+				params.Password = &password
 			}
 
 			var result []controld.Profile
@@ -156,6 +171,10 @@ func newProfilesUpdateCommand(factory clientFactory) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK to update (required)")
 	cmd.Flags().StringVar(&name, "name", "", "new profile name")
+	cmd.Flags().IntVar(&disableTTL, "disable-ttl", 0, "disable (1) or keep (0) TTL on filtered responses")
+	cmd.Flags().BoolVar(&lockStatus, "lock-status", false, "lock (true) or unlock (false) the profile")
+	cmd.Flags().StringVar(&lockMessage, "lock-message", "", "message shown when the profile is locked")
+	cmd.Flags().StringVar(&password, "password", "", "password required to unlock the profile")
 	ax.WithNonDeterministicFields[profilesListPayload](cmd)
 	return cmd
 }
@@ -168,8 +187,8 @@ func newProfilesDeleteCommand(factory clientFactory) *cobra.Command {
 		Short: "Delete a profile",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if profileID == "" {
-				return ax.NewError(cmd.Context(), "validation_error", "--profile-id is required",
-					ax.WithErrorExitCode(ax.ExitValidation))
+				return validationError(cmd, "--profile-id is required",
+					"pass --profile-id with the profile PK")
 			}
 
 			subject := "delete profile " + profileID

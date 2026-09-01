@@ -99,12 +99,12 @@ func newProfilesFiltersListCommand(factory clientFactory) *cobra.Command {
 		Short: "List a profile's filters",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if profileID == "" {
-				return ax.NewError(cmd.Context(), "validation_error", "--profile-id is required",
-					ax.WithErrorExitCode(ax.ExitValidation))
+				return validationError(cmd, "--profile-id is required",
+					"pass --profile-id with the profile PK")
 			}
 			if source != "native" && source != "external" {
-				return ax.NewError(cmd.Context(), "validation_error", "--source must be native or external",
-					ax.WithErrorExitCode(ax.ExitValidation))
+				return validationError(cmd, "--source must be native or external",
+					"pass --source=native or --source=external")
 			}
 			client, err := factory(cmd)
 			if err != nil {
@@ -146,8 +146,8 @@ func newProfilesFiltersUpdateCommand(factory clientFactory) *cobra.Command {
 		Short: "Enable or disable a filter on a profile",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if profileID == "" || filter == "" {
-				return ax.NewError(cmd.Context(), "validation_error", "--profile-id and --filter are required",
-					ax.WithErrorExitCode(ax.ExitValidation))
+				return validationError(cmd, "--profile-id and --filter are required",
+					"pass --profile-id with the profile PK and --filter with the filter PK")
 			}
 			client, err := factory(cmd)
 			if err != nil {

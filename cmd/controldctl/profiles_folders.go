@@ -65,8 +65,8 @@ func newProfilesFoldersListCommand(factory clientFactory) *cobra.Command {
 		Short: "List a profile's rule folders",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if profileID == "" {
-				return ax.NewError(cmd.Context(), "validation_error", "--profile-id is required",
-					ax.WithErrorExitCode(ax.ExitValidation))
+				return validationError(cmd, "--profile-id is required",
+					"pass --profile-id with the profile PK")
 			}
 			client, err := factory(cmd)
 			if err != nil {
@@ -86,7 +86,7 @@ func newProfilesFoldersListCommand(factory clientFactory) *cobra.Command {
 }
 
 func newProfilesFoldersCreateCommand(factory clientFactory) *cobra.Command {
-	var profileID, name string
+	var profileID, name, via string
 	var do int
 	var enabled bool
 
@@ -95,8 +95,8 @@ func newProfilesFoldersCreateCommand(factory clientFactory) *cobra.Command {
 		Short: "Create a rule folder",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if profileID == "" || name == "" {
-				return ax.NewError(cmd.Context(), "validation_error", "--profile-id and --name are required",
-					ax.WithErrorExitCode(ax.ExitValidation))
+				return validationError(cmd, "--profile-id and --name are required",
+					"pass --profile-id with the profile PK and --name with the folder name")
 			}
 			client, err := factory(cmd)
 			if err != nil {
@@ -110,6 +110,9 @@ func newProfilesFoldersCreateCommand(factory clientFactory) *cobra.Command {
 				Name:      name,
 				Do:        &doVal,
 				Status:    &statusVal,
+			}
+			if via != "" {
+				params.Via = &via
 			}
 
 			var result []controld.Group
@@ -132,12 +135,13 @@ func newProfilesFoldersCreateCommand(factory clientFactory) *cobra.Command {
 	cmd.Flags().StringVar(&name, "name", "", "folder name (required)")
 	cmd.Flags().IntVar(&do, "do", int(controld.Block), "default action for rules in this folder: 0=block, 1=bypass, 2=spoof, 3=redirect")
 	cmd.Flags().BoolVar(&enabled, "enabled", true, "enable (true) or disable (false) the folder")
+	cmd.Flags().StringVar(&via, "via", "", "IPv4 redirect target for rules in this folder (used with --do=3)")
 	ax.WithNonDeterministicFields[foldersListPayload](cmd)
 	return cmd
 }
 
 func newProfilesFoldersUpdateCommand(factory clientFactory) *cobra.Command {
-	var profileID, folderID string
+	var profileID, folderID, via string
 	var do int
 	var enabled bool
 
@@ -146,8 +150,8 @@ func newProfilesFoldersUpdateCommand(factory clientFactory) *cobra.Command {
 		Short: "Update a rule folder",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if profileID == "" || folderID == "" {
-				return ax.NewError(cmd.Context(), "validation_error", "--profile-id and --folder-id are required",
-					ax.WithErrorExitCode(ax.ExitValidation))
+				return validationError(cmd, "--profile-id and --folder-id are required",
+					"pass --profile-id with the profile PK and --folder-id with the folder ID")
 			}
 			client, err := factory(cmd)
 			if err != nil {
@@ -165,6 +169,9 @@ func newProfilesFoldersUpdateCommand(factory clientFactory) *cobra.Command {
 			if cmd.Flags().Changed("enabled") {
 				statusVal := controld.IntBool(enabled)
 				params.Status = &statusVal
+			}
+			if via != "" {
+				params.Via = &via
 			}
 
 			var result []controld.Group
@@ -187,6 +194,7 @@ func newProfilesFoldersUpdateCommand(factory clientFactory) *cobra.Command {
 	cmd.Flags().StringVar(&folderID, "folder-id", "", "folder ID to update (required)")
 	cmd.Flags().IntVar(&do, "do", int(controld.Block), "default action for rules in this folder: 0=block, 1=bypass, 2=spoof, 3=redirect")
 	cmd.Flags().BoolVar(&enabled, "enabled", true, "enable (true) or disable (false) the folder")
+	cmd.Flags().StringVar(&via, "via", "", "IPv4 redirect target for rules in this folder (used with --do=3)")
 	ax.WithNonDeterministicFields[foldersListPayload](cmd)
 	return cmd
 }
@@ -199,8 +207,8 @@ func newProfilesFoldersDeleteCommand(factory clientFactory) *cobra.Command {
 		Short: "Delete a rule folder",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if profileID == "" || folderID == "" {
-				return ax.NewError(cmd.Context(), "validation_error", "--profile-id and --folder-id are required",
-					ax.WithErrorExitCode(ax.ExitValidation))
+				return validationError(cmd, "--profile-id and --folder-id are required",
+					"pass --profile-id with the profile PK and --folder-id with the folder ID")
 			}
 
 			subject := "delete rule folder " + folderID

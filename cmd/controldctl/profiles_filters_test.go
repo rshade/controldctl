@@ -12,10 +12,9 @@ import (
 )
 
 func TestProfilesFiltersListDefaultsToNative(t *testing.T) {
+	var gotPath string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/profiles/p1/filters" {
-			t.Fatalf("unexpected path: %s", r.URL.Path)
-		}
+		gotPath = r.URL.Path
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"success": true, "body": {"filters": [{"PK": "ads", "name": "Ads", "description": "d", "sources": [], "status": 1}]}}`))
 	}))
@@ -32,6 +31,9 @@ func TestProfilesFiltersListDefaultsToNative(t *testing.T) {
 	)
 	if code != ax.ExitSuccess {
 		t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr.String())
+	}
+	if gotPath != "/profiles/p1/filters" {
+		t.Fatalf("unexpected path: %s", gotPath)
 	}
 
 	var envelope struct {
@@ -57,10 +59,9 @@ func TestProfilesFiltersListDefaultsToNative(t *testing.T) {
 }
 
 func TestProfilesFiltersListRemapsNestedOptPKCasing(t *testing.T) {
+	var gotPath string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/profiles/p1/filters" {
-			t.Fatalf("unexpected path: %s", r.URL.Path)
-		}
+		gotPath = r.URL.Path
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"success": true, "body": {"filters": [{
 			"PK": "custom1",
@@ -87,6 +88,9 @@ func TestProfilesFiltersListRemapsNestedOptPKCasing(t *testing.T) {
 	)
 	if code != ax.ExitSuccess {
 		t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr.String())
+	}
+	if gotPath != "/profiles/p1/filters" {
+		t.Fatalf("unexpected path: %s", gotPath)
 	}
 
 	var envelope struct {
@@ -121,10 +125,9 @@ func TestProfilesFiltersListRemapsNestedOptPKCasing(t *testing.T) {
 }
 
 func TestProfilesFiltersListExternalSource(t *testing.T) {
+	var gotPath string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/profiles/p1/filters/external" {
-			t.Fatalf("unexpected path: %s", r.URL.Path)
-		}
+		gotPath = r.URL.Path
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"success": true, "body": {"filters": []}}`))
 	}))
@@ -142,11 +145,15 @@ func TestProfilesFiltersListExternalSource(t *testing.T) {
 	if code != ax.ExitSuccess {
 		t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr.String())
 	}
+	if gotPath != "/profiles/p1/filters/external" {
+		t.Fatalf("unexpected path: %s", gotPath)
+	}
 }
 
 func TestProfilesFiltersListRejectsInvalidSource(t *testing.T) {
+	called := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		t.Fatal("unexpected HTTP call for invalid --source")
+		called = true
 	}))
 	defer server.Close()
 
@@ -162,16 +169,16 @@ func TestProfilesFiltersListRejectsInvalidSource(t *testing.T) {
 	if code != ax.ExitValidation {
 		t.Fatalf("exit code = %d, want %d (ExitValidation); stderr=%s", code, ax.ExitValidation, stderr.String())
 	}
+	if called {
+		t.Fatal("unexpected HTTP call for invalid --source")
+	}
 }
 
 func TestProfilesFiltersUpdateEnablesFilter(t *testing.T) {
+	var gotMethod, gotPath string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPut {
-			t.Fatalf("unexpected method: %s", r.Method)
-		}
-		if r.URL.Path != "/profiles/p1/filters/filter/ads" {
-			t.Fatalf("unexpected path: %s", r.URL.Path)
-		}
+		gotMethod = r.Method
+		gotPath = r.URL.Path
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"success": true, "body": {"filters": null}}`))
 	}))
@@ -189,14 +196,21 @@ func TestProfilesFiltersUpdateEnablesFilter(t *testing.T) {
 	if code != ax.ExitSuccess {
 		t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr.String())
 	}
+	if gotMethod != http.MethodPut {
+		t.Fatalf("unexpected method: %s", gotMethod)
+	}
+	if gotPath != "/profiles/p1/filters/filter/ads" {
+		t.Fatalf("unexpected path: %s", gotPath)
+	}
 	if !bytes.Contains(stdout.Bytes(), []byte(`"updated":true`)) {
 		t.Fatalf("expected updated:true in output: %s", stdout.String())
 	}
 }
 
 func TestProfilesFiltersUpdateRequiresProfileIDAndFilter(t *testing.T) {
+	called := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		t.Fatal("unexpected HTTP call for missing required flags")
+		called = true
 	}))
 	defer server.Close()
 
@@ -211,5 +225,8 @@ func TestProfilesFiltersUpdateRequiresProfileIDAndFilter(t *testing.T) {
 	)
 	if code != ax.ExitValidation {
 		t.Fatalf("exit code = %d, want %d (ExitValidation); stderr=%s", code, ax.ExitValidation, stderr.String())
+	}
+	if called {
+		t.Fatal("unexpected HTTP call for missing required flags")
 	}
 }

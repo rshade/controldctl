@@ -12,10 +12,9 @@ import (
 )
 
 func TestProfilesListWritesEnvelope(t *testing.T) {
+	var gotPath string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/profiles" {
-			t.Fatalf("unexpected path: %s", r.URL.Path)
-		}
+		gotPath = r.URL.Path
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"success": true, "body": {"profiles": [{"PK": "p1", "updated": 1700000000, "name": "Home"}]}}`))
 	}))
@@ -32,6 +31,9 @@ func TestProfilesListWritesEnvelope(t *testing.T) {
 	)
 	if code != ax.ExitSuccess {
 		t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr.String())
+	}
+	if gotPath != "/profiles" {
+		t.Fatalf("unexpected path: %s", gotPath)
 	}
 
 	var envelope struct {
@@ -57,21 +59,16 @@ func TestProfilesListWritesEnvelope(t *testing.T) {
 }
 
 func TestProfilesCreateWritesEnvelope(t *testing.T) {
+	var gotMethod, gotPath string
+	var body struct {
+		Name string `json:"name"`
+	}
+	var decodeErr error
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Fatalf("unexpected method: %s", r.Method)
-		}
-		if r.URL.Path != "/profiles" {
-			t.Fatalf("unexpected path: %s", r.URL.Path)
-		}
-		var body struct {
-			Name string `json:"name"`
-		}
+		gotMethod = r.Method
+		gotPath = r.URL.Path
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			t.Fatalf("decode request body: %v", err)
-		}
-		if body.Name != "Kids" {
-			t.Fatalf("unexpected request body: %+v", body)
+			decodeErr = err
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"success": true, "body": {"profiles": [{"PK": "p2", "updated": 1700000000, "name": "Kids"}]}}`))
@@ -90,14 +87,27 @@ func TestProfilesCreateWritesEnvelope(t *testing.T) {
 	if code != ax.ExitSuccess {
 		t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr.String())
 	}
+	if gotMethod != http.MethodPost {
+		t.Fatalf("unexpected method: %s", gotMethod)
+	}
+	if gotPath != "/profiles" {
+		t.Fatalf("unexpected path: %s", gotPath)
+	}
+	if decodeErr != nil {
+		t.Fatalf("decode request body: %v", decodeErr)
+	}
+	if body.Name != "Kids" {
+		t.Fatalf("unexpected request body: %+v", body)
+	}
 	if !bytes.Contains(stdout.Bytes(), []byte(`"name":"Kids"`)) {
 		t.Fatalf("expected created profile name in output: %s", stdout.String())
 	}
 }
 
 func TestProfilesCreateRequiresName(t *testing.T) {
+	called := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		t.Fatal("unexpected HTTP call for missing required flags")
+		called = true
 	}))
 	defer server.Close()
 
@@ -113,16 +123,16 @@ func TestProfilesCreateRequiresName(t *testing.T) {
 	if code != ax.ExitValidation {
 		t.Fatalf("exit code = %d, want %d (ExitValidation); stderr=%s", code, ax.ExitValidation, stderr.String())
 	}
+	if called {
+		t.Fatal("unexpected HTTP call for missing required flags")
+	}
 }
 
 func TestProfilesUpdateWritesEnvelope(t *testing.T) {
+	var gotMethod, gotPath string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPut {
-			t.Fatalf("unexpected method: %s", r.Method)
-		}
-		if r.URL.Path != "/profiles/p1" {
-			t.Fatalf("unexpected path: %s", r.URL.Path)
-		}
+		gotMethod = r.Method
+		gotPath = r.URL.Path
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"success": true, "body": {"profiles": [{"PK": "p1", "updated": 1700000000, "name": "Renamed"}]}}`))
 	}))
@@ -140,14 +150,21 @@ func TestProfilesUpdateWritesEnvelope(t *testing.T) {
 	if code != ax.ExitSuccess {
 		t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr.String())
 	}
+	if gotMethod != http.MethodPut {
+		t.Fatalf("unexpected method: %s", gotMethod)
+	}
+	if gotPath != "/profiles/p1" {
+		t.Fatalf("unexpected path: %s", gotPath)
+	}
 	if !bytes.Contains(stdout.Bytes(), []byte(`"name":"Renamed"`)) {
 		t.Fatalf("expected updated profile name in output: %s", stdout.String())
 	}
 }
 
 func TestProfilesUpdateRequiresProfileID(t *testing.T) {
+	called := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		t.Fatal("unexpected HTTP call for missing required flags")
+		called = true
 	}))
 	defer server.Close()
 
@@ -163,11 +180,15 @@ func TestProfilesUpdateRequiresProfileID(t *testing.T) {
 	if code != ax.ExitValidation {
 		t.Fatalf("exit code = %d, want %d (ExitValidation); stderr=%s", code, ax.ExitValidation, stderr.String())
 	}
+	if called {
+		t.Fatal("unexpected HTTP call for missing required flags")
+	}
 }
 
 func TestProfilesDeleteRequiresYes(t *testing.T) {
+	called := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		t.Fatal("the real API should never be called without --yes in machine mode")
+		called = true
 	}))
 	defer server.Close()
 
@@ -183,16 +204,16 @@ func TestProfilesDeleteRequiresYes(t *testing.T) {
 	if code != ax.ExitValidation {
 		t.Fatalf("exit code = %d, want %d (ExitValidation); stderr=%s", code, ax.ExitValidation, stderr.String())
 	}
+	if called {
+		t.Fatal("the real API should never be called without --yes in machine mode")
+	}
 }
 
 func TestProfilesDeleteWithYes(t *testing.T) {
+	var gotMethod, gotPath string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodDelete {
-			t.Fatalf("unexpected method: %s", r.Method)
-		}
-		if r.URL.Path != "/profiles/p1" {
-			t.Fatalf("unexpected path: %s", r.URL.Path)
-		}
+		gotMethod = r.Method
+		gotPath = r.URL.Path
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"success": true, "body": []}`))
 	}))
@@ -209,6 +230,12 @@ func TestProfilesDeleteWithYes(t *testing.T) {
 	)
 	if code != ax.ExitSuccess {
 		t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr.String())
+	}
+	if gotMethod != http.MethodDelete {
+		t.Fatalf("unexpected method: %s", gotMethod)
+	}
+	if gotPath != "/profiles/p1" {
+		t.Fatalf("unexpected path: %s", gotPath)
 	}
 	if !bytes.Contains(stdout.Bytes(), []byte(`"deleted":true`)) {
 		t.Fatalf("expected deleted:true in output: %s", stdout.String())
@@ -237,13 +264,38 @@ func TestProfilesDeleteDryRunSkipsRealCall(t *testing.T) {
 	if called {
 		t.Fatal("expected the real API call to be skipped under --dry-run")
 	}
+	if !bytes.Contains(stdout.Bytes(), []byte(`"deleted":false`)) {
+		t.Fatalf("expected deleted:false in dry-run output: %s", stdout.String())
+	}
+	if !bytes.Contains(stdout.Bytes(), []byte(`"dry_run":true`)) {
+		t.Fatalf("expected dry_run:true in dry-run output: %s", stdout.String())
+	}
+}
+
+func TestProfilesCreateDryRunSkipsRealCall(t *testing.T) {
+	called := false
+	stdout, stderr, code := executeCommand(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		called = true
+	}), []string{"profiles", "create", "--name=Home", "--dry-run", "--format=json"})
+
+	if code != ax.ExitSuccess {
+		t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr)
+	}
+	if called {
+		t.Fatal("expected the real API call to be skipped under --dry-run")
+	}
+	if !bytes.Contains(stdout, []byte(`"profiles":null`)) {
+		t.Fatalf("expected profiles:null in dry-run output: %s", stdout)
+	}
+	if !bytes.Contains(stdout, []byte(`"dry_run":true`)) {
+		t.Fatalf("expected dry_run:true in dry-run output: %s", stdout)
+	}
 }
 
 func TestProfilesOptionsListWritesEnvelope(t *testing.T) {
+	var gotPath string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/profiles/options" {
-			t.Fatalf("unexpected path: %s", r.URL.Path)
-		}
+		gotPath = r.URL.Path
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"success": true, "body": {"options": [{"PK": "opt1", "title": "Block Page", "description": "d", "type": "toggle", "default_value": false, "info_url": ""}]}}`))
 	}))
@@ -261,19 +313,19 @@ func TestProfilesOptionsListWritesEnvelope(t *testing.T) {
 	if code != ax.ExitSuccess {
 		t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr.String())
 	}
+	if gotPath != "/profiles/options" {
+		t.Fatalf("unexpected path: %s", gotPath)
+	}
 	if !bytes.Contains(stdout.Bytes(), []byte("Block Page")) {
 		t.Fatalf("expected option title in output: %s", stdout.String())
 	}
 }
 
 func TestProfilesOptionsUpdateWritesEnvelope(t *testing.T) {
+	var gotMethod, gotPath string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPut {
-			t.Fatalf("unexpected method: %s", r.Method)
-		}
-		if r.URL.Path != "/profiles/p1/options/block_page" {
-			t.Fatalf("unexpected path: %s", r.URL.Path)
-		}
+		gotMethod = r.Method
+		gotPath = r.URL.Path
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"success": true, "body": {"options": true}}`))
 	}))
@@ -291,14 +343,21 @@ func TestProfilesOptionsUpdateWritesEnvelope(t *testing.T) {
 	if code != ax.ExitSuccess {
 		t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr.String())
 	}
+	if gotMethod != http.MethodPut {
+		t.Fatalf("unexpected method: %s", gotMethod)
+	}
+	if gotPath != "/profiles/p1/options/block_page" {
+		t.Fatalf("unexpected path: %s", gotPath)
+	}
 	if !bytes.Contains(stdout.Bytes(), []byte(`"updated":true`)) {
 		t.Fatalf("expected updated:true in output: %s", stdout.String())
 	}
 }
 
 func TestProfilesOptionsUpdateRequiresProfileIDAndName(t *testing.T) {
+	called := false
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		t.Fatal("unexpected HTTP call for missing required flags")
+		called = true
 	}))
 	defer server.Close()
 
@@ -314,4 +373,74 @@ func TestProfilesOptionsUpdateRequiresProfileIDAndName(t *testing.T) {
 	if code != ax.ExitValidation {
 		t.Fatalf("exit code = %d, want %d (ExitValidation); stderr=%s", code, ax.ExitValidation, stderr.String())
 	}
+	if called {
+		t.Fatal("unexpected HTTP call for missing required flags")
+	}
+}
+
+func TestProfilesUpdateSendsDeferredFlags(t *testing.T) {
+	profileResponse := `{"success": true, "body": {"profiles": [{"PK": "p1", "updated": 1700000000, "name": "Home"}]}}`
+
+	t.Run("set flags are sent in the request body", func(t *testing.T) {
+		var body map[string]json.RawMessage
+		var decodeErr error
+		_, stderr, code := executeCommand(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				decodeErr = err
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(profileResponse))
+		}), []string{
+			"profiles", "update",
+			"--profile-id=p1", "--disable-ttl=1", "--lock-status",
+			"--lock-message=Ask an adult", "--password=s3cret",
+			"--format=json",
+		})
+
+		if code != ax.ExitSuccess {
+			t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr)
+		}
+		if decodeErr != nil {
+			t.Fatalf("decode request body: %v", decodeErr)
+		}
+		want := map[string]string{
+			"disable_ttl":  "1",
+			"lock_status":  "1",
+			"lock_message": `"Ask an adult"`,
+			"password":     `"s3cret"`,
+		}
+		for key, wantRaw := range want {
+			got, ok := body[key]
+			if !ok {
+				t.Fatalf("expected request body to contain %q, got: %+v", key, body)
+			}
+			if string(got) != wantRaw {
+				t.Fatalf("request body %q = %s, want %s", key, got, wantRaw)
+			}
+		}
+	})
+
+	t.Run("unset flags stay omitted from the request body", func(t *testing.T) {
+		var body map[string]json.RawMessage
+		var decodeErr error
+		_, stderr, code := executeCommand(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				decodeErr = err
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(profileResponse))
+		}), []string{"profiles", "update", "--profile-id=p1", "--name=Renamed", "--format=json"})
+
+		if code != ax.ExitSuccess {
+			t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr)
+		}
+		if decodeErr != nil {
+			t.Fatalf("decode request body: %v", decodeErr)
+		}
+		for _, key := range []string{"disable_ttl", "lock_status", "lock_message", "password"} {
+			if _, ok := body[key]; ok {
+				t.Fatalf("expected request body to omit %q, got: %+v", key, body)
+			}
+		}
+	})
 }

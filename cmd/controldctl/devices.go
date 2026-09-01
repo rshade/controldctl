@@ -81,36 +81,66 @@ func newDevicesListCommand(factory clientFactory) *cobra.Command {
 
 func newDevicesCreateCommand(factory clientFactory) *cobra.Command {
 	var name, profileID, icon string
+	var ddnsSubdomain, ddnsExtHost string
+	var remapDeviceID, remapClientID string
+	var legacyIPv4Status, ddnsStatus, ddnsExtStatus bool
 
 	cmd := &cobra.Command{
 		Use:   "create",
 		Short: "Create a device",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if name == "" || profileID == "" {
-				return ax.NewError(cmd.Context(), "validation_error", "--name and --profile-id are required",
-					ax.WithErrorExitCode(ax.ExitValidation))
+				return validationError(cmd, "--name and --profile-id are required",
+					"pass --name with the device name and --profile-id with the profile PK")
 			}
 			client, err := factory(cmd)
 			if err != nil {
 				return err
 			}
 
+			params := controld.CreateDeviceParams{
+				Name:      name,
+				ProfileID: profileID,
+				Icon:      controld.IconName(icon),
+			}
+			if cmd.Flags().Changed("legacy-ipv4-status") {
+				v := controld.IntBool(legacyIPv4Status)
+				params.LegacyIPv4Status = &v
+			}
+			if cmd.Flags().Changed("ddns-status") {
+				v := controld.IntBool(ddnsStatus)
+				params.DDNSStatus = &v
+			}
+			if ddnsSubdomain != "" {
+				params.DDNSSubdomain = &ddnsSubdomain
+			}
+			if cmd.Flags().Changed("ddns-ext-status") {
+				v := controld.IntBool(ddnsExtStatus)
+				params.DDNSExtStatus = &v
+			}
+			if ddnsExtHost != "" {
+				params.DDNSExtHost = &ddnsExtHost
+			}
+			if remapDeviceID != "" {
+				params.RemapDeviceID = &remapDeviceID
+			}
+			if remapClientID != "" {
+				params.RemapClientID = &remapClientID
+			}
+
 			var result controld.Device
 			ran, err := ax.Guard(cmd.Context(), func(ctx context.Context) error {
 				var createErr error
-				result, createErr = client.CreateDevice(ctx, controld.CreateDeviceParams{
-					Name:      name,
-					ProfileID: profileID,
-					Icon:      controld.IconName(icon),
-				})
+				result, createErr = client.CreateDevice(ctx, params)
 				return createErr
 			})
 			if err != nil {
 				return controld.MapError(cmd.Context(), err)
 			}
-			var payload devicePayload
+			var payload *devicePayload
 			if ran {
-				payload = toDevicePayload(result)
+				device := toDevicePayload(result)
+				payload = &device
 			}
 			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
 		},
@@ -118,20 +148,29 @@ func newDevicesCreateCommand(factory clientFactory) *cobra.Command {
 	cmd.Flags().StringVar(&name, "name", "", "device name (required)")
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK to assign (required)")
 	cmd.Flags().StringVar(&icon, "icon", string(controld.DesktopLinux), "device icon name")
+	cmd.Flags().BoolVar(&legacyIPv4Status, "legacy-ipv4-status", false, "enable (true) or disable (false) the legacy IPv4 resolver")
+	cmd.Flags().BoolVar(&ddnsStatus, "ddns-status", false, "enable (true) or disable (false) ControlD DDNS")
+	cmd.Flags().StringVar(&ddnsSubdomain, "ddns-subdomain", "", "ControlD DDNS subdomain")
+	cmd.Flags().BoolVar(&ddnsExtStatus, "ddns-ext-status", false, "enable (true) or disable (false) external DDNS")
+	cmd.Flags().StringVar(&ddnsExtHost, "ddns-ext-host", "", "external DDNS hostname")
+	cmd.Flags().StringVar(&remapDeviceID, "remap-device-id", "", "device PK to remap this device to")
+	cmd.Flags().StringVar(&remapClientID, "remap-client-id", "", "client ID to remap this device to")
 	ax.WithNonDeterministicFields[devicePayload](cmd)
 	return cmd
 }
 
 func newDevicesUpdateCommand(factory clientFactory) *cobra.Command {
 	var deviceID, name, profileID string
+	var ddnsSubdomain, ddnsExtHost string
+	var legacyIPv4Status, ddnsStatus, ddnsExtStatus bool
 
 	cmd := &cobra.Command{
 		Use:   "update",
 		Short: "Update a device",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if deviceID == "" {
-				return ax.NewError(cmd.Context(), "validation_error", "--device-id is required",
-					ax.WithErrorExitCode(ax.ExitValidation))
+				return validationError(cmd, "--device-id is required",
+					"pass --device-id with the device PK")
 			}
 			client, err := factory(cmd)
 			if err != nil {
@@ -145,6 +184,24 @@ func newDevicesUpdateCommand(factory clientFactory) *cobra.Command {
 			if profileID != "" {
 				params.ProfileID = &profileID
 			}
+			if cmd.Flags().Changed("legacy-ipv4-status") {
+				v := controld.IntBool(legacyIPv4Status)
+				params.LegacyIPv4Status = &v
+			}
+			if cmd.Flags().Changed("ddns-status") {
+				v := controld.IntBool(ddnsStatus)
+				params.DDNSStatus = &v
+			}
+			if ddnsSubdomain != "" {
+				params.DDNSSubdomain = &ddnsSubdomain
+			}
+			if cmd.Flags().Changed("ddns-ext-status") {
+				v := controld.IntBool(ddnsExtStatus)
+				params.DDNSExtStatus = &v
+			}
+			if ddnsExtHost != "" {
+				params.DDNSExtHost = &ddnsExtHost
+			}
 
 			var result controld.Device
 			ran, err := ax.Guard(cmd.Context(), func(ctx context.Context) error {
@@ -155,9 +212,10 @@ func newDevicesUpdateCommand(factory clientFactory) *cobra.Command {
 			if err != nil {
 				return controld.MapError(cmd.Context(), err)
 			}
-			var payload devicePayload
+			var payload *devicePayload
 			if ran {
-				payload = toDevicePayload(result)
+				device := toDevicePayload(result)
+				payload = &device
 			}
 			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
 		},
@@ -165,6 +223,11 @@ func newDevicesUpdateCommand(factory clientFactory) *cobra.Command {
 	cmd.Flags().StringVar(&deviceID, "device-id", "", "device PK to update (required)")
 	cmd.Flags().StringVar(&name, "name", "", "new device name")
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "new profile PK to assign")
+	cmd.Flags().BoolVar(&legacyIPv4Status, "legacy-ipv4-status", false, "enable (true) or disable (false) the legacy IPv4 resolver")
+	cmd.Flags().BoolVar(&ddnsStatus, "ddns-status", false, "enable (true) or disable (false) ControlD DDNS")
+	cmd.Flags().StringVar(&ddnsSubdomain, "ddns-subdomain", "", "ControlD DDNS subdomain")
+	cmd.Flags().BoolVar(&ddnsExtStatus, "ddns-ext-status", false, "enable (true) or disable (false) external DDNS")
+	cmd.Flags().StringVar(&ddnsExtHost, "ddns-ext-host", "", "external DDNS hostname")
 	ax.WithNonDeterministicFields[devicePayload](cmd)
 	return cmd
 }
@@ -177,8 +240,8 @@ func newDevicesDeleteCommand(factory clientFactory) *cobra.Command {
 		Short: "Delete a device",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if deviceID == "" {
-				return ax.NewError(cmd.Context(), "validation_error", "--device-id is required",
-					ax.WithErrorExitCode(ax.ExitValidation))
+				return validationError(cmd, "--device-id is required",
+					"pass --device-id with the device PK")
 			}
 
 			subject := fmt.Sprintf("delete device %s", deviceID)

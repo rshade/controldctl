@@ -67,9 +67,8 @@ func newProfilesRulesListCommand(factory clientFactory) *cobra.Command {
 		Short: "List custom rules in a rule folder",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if profileID == "" || folderID == "" {
-				return ax.NewError(cmd.Context(), "validation_error", "--profile-id and --folder-id are required",
-					ax.WithActionableFix("run 'profiles folders list --profile-id=<id>' to find a folder ID"),
-					ax.WithErrorExitCode(ax.ExitValidation))
+				return validationError(cmd, "--profile-id and --folder-id are required",
+					"pass --profile-id with the profile PK and --folder-id with the folder ID; run 'profiles folders list --profile-id=<id>' to find a folder ID")
 			}
 			client, err := factory(cmd)
 			if err != nil {
@@ -93,8 +92,8 @@ func newProfilesRulesListCommand(factory clientFactory) *cobra.Command {
 }
 
 func newProfilesRulesCreateCommand(factory clientFactory) *cobra.Command {
-	var profileID, hostnames string
-	var do int
+	var profileID, hostnames, via, viaV6 string
+	var do, group int
 	var enabled bool
 
 	cmd := &cobra.Command{
@@ -102,8 +101,12 @@ func newProfilesRulesCreateCommand(factory clientFactory) *cobra.Command {
 		Short: "Create custom rules for one or more hostnames",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if profileID == "" || hostnames == "" {
-				return ax.NewError(cmd.Context(), "validation_error", "--profile-id and --hostnames are required",
-					ax.WithErrorExitCode(ax.ExitValidation))
+				return validationError(cmd, "--profile-id and --hostnames are required",
+					"pass --profile-id with the profile PK and --hostnames with comma-separated hostnames")
+			}
+			if controld.DoType(do) == controld.Redirect && via == "" {
+				return validationError(cmd, "--via is required when --do=3 (redirect)",
+					"pass --via with the IPv4 redirect target")
 			}
 			client, err := factory(cmd)
 			if err != nil {
@@ -115,6 +118,15 @@ func newProfilesRulesCreateCommand(factory clientFactory) *cobra.Command {
 				Do:        controld.DoType(do),
 				Status:    controld.IntBool(enabled),
 				Hostnames: strings.Split(hostnames, ","),
+			}
+			if via != "" {
+				params.Via = &via
+			}
+			if viaV6 != "" {
+				params.ViaV6 = &viaV6
+			}
+			if cmd.Flags().Changed("group") {
+				params.Group = &group
 			}
 
 			var result []controld.CustomRule
@@ -137,13 +149,16 @@ func newProfilesRulesCreateCommand(factory clientFactory) *cobra.Command {
 	cmd.Flags().StringVar(&hostnames, "hostnames", "", "comma-separated hostnames (required)")
 	cmd.Flags().IntVar(&do, "do", int(controld.Block), "action: 0=block, 1=bypass, 2=spoof, 3=redirect")
 	cmd.Flags().BoolVar(&enabled, "enabled", true, "enable (true) or disable (false) the rule")
+	cmd.Flags().StringVar(&via, "via", "", "IPv4 redirect target (required when --do=3)")
+	cmd.Flags().StringVar(&viaV6, "via-v6", "", "IPv6 redirect target (used with --do=3)")
+	cmd.Flags().IntVar(&group, "group", 0, "rule folder PK to place the rules in (0 = default folder)")
 	ax.WithNonDeterministicFields[customRulesPayload](cmd)
 	return cmd
 }
 
 func newProfilesRulesUpdateCommand(factory clientFactory) *cobra.Command {
-	var profileID, hostnames string
-	var do int
+	var profileID, hostnames, via, viaV6 string
+	var do, group int
 	var enabled bool
 
 	cmd := &cobra.Command{
@@ -151,8 +166,17 @@ func newProfilesRulesUpdateCommand(factory clientFactory) *cobra.Command {
 		Short: "Update custom rules for one or more hostnames",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if profileID == "" || hostnames == "" {
-				return ax.NewError(cmd.Context(), "validation_error", "--profile-id and --hostnames are required",
-					ax.WithErrorExitCode(ax.ExitValidation))
+				return validationError(cmd, "--profile-id and --hostnames are required",
+					"pass --profile-id with the profile PK and --hostnames with comma-separated hostnames")
+			}
+			usingRedirectOrFolderFlags := cmd.Flags().Changed("via") || cmd.Flags().Changed("via-v6") || cmd.Flags().Changed("group")
+			if usingRedirectOrFolderFlags && (!cmd.Flags().Changed("do") || !cmd.Flags().Changed("enabled")) {
+				return validationError(cmd, "--do and --enabled are required when using --via, --via-v6, or --group",
+					"pass --do (0=block, 1=bypass, 2=spoof, 3=redirect) and --enabled (true or false) along with --via, --via-v6, and/or --group")
+			}
+			if controld.DoType(do) == controld.Redirect && via == "" {
+				return validationError(cmd, "--via is required when --do=3 (redirect)",
+					"pass --via with the IPv4 redirect target")
 			}
 			client, err := factory(cmd)
 			if err != nil {
@@ -164,6 +188,15 @@ func newProfilesRulesUpdateCommand(factory clientFactory) *cobra.Command {
 				Do:        controld.DoType(do),
 				Status:    controld.IntBool(enabled),
 				Hostnames: strings.Split(hostnames, ","),
+			}
+			if via != "" {
+				params.Via = &via
+			}
+			if viaV6 != "" {
+				params.ViaV6 = &viaV6
+			}
+			if cmd.Flags().Changed("group") {
+				params.Group = &group
 			}
 
 			var result []controld.CustomRule
@@ -186,6 +219,9 @@ func newProfilesRulesUpdateCommand(factory clientFactory) *cobra.Command {
 	cmd.Flags().StringVar(&hostnames, "hostnames", "", "comma-separated hostnames (required)")
 	cmd.Flags().IntVar(&do, "do", int(controld.Block), "action: 0=block, 1=bypass, 2=spoof, 3=redirect")
 	cmd.Flags().BoolVar(&enabled, "enabled", true, "enable (true) or disable (false) the rule")
+	cmd.Flags().StringVar(&via, "via", "", "IPv4 redirect target (required when --do=3)")
+	cmd.Flags().StringVar(&viaV6, "via-v6", "", "IPv6 redirect target (used with --do=3)")
+	cmd.Flags().IntVar(&group, "group", 0, "rule folder PK to place the rules in (0 = default folder)")
 	ax.WithNonDeterministicFields[customRulesPayload](cmd)
 	return cmd
 }
@@ -198,8 +234,8 @@ func newProfilesRulesDeleteCommand(factory clientFactory) *cobra.Command {
 		Short: "Delete the custom rule for a hostname",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if profileID == "" || hostname == "" {
-				return ax.NewError(cmd.Context(), "validation_error", "--profile-id and --hostname are required",
-					ax.WithErrorExitCode(ax.ExitValidation))
+				return validationError(cmd, "--profile-id and --hostname are required",
+					"pass --profile-id with the profile PK and --hostname with the rule's hostname")
 			}
 
 			subject := "delete custom rule for " + hostname

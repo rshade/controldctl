@@ -83,8 +83,8 @@ func newProfilesOptionsUpdateCommand(factory clientFactory) *cobra.Command {
 		Short: "Update a profile option",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if profileID == "" || name == "" {
-				return ax.NewError(cmd.Context(), "validation_error", "--profile-id and --name are required",
-					ax.WithErrorExitCode(ax.ExitValidation))
+				return validationError(cmd, "--profile-id and --name are required",
+					"pass --profile-id with the profile PK and --name with the option name")
 			}
 			client, err := factory(cmd)
 			if err != nil {

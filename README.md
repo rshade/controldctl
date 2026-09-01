@@ -38,7 +38,15 @@ interactive mode, prompting `[y/N]` instead. If `--format` is omitted,
 Every mutating command supports `--dry-run`, which emits the response
 envelope without making the underlying API call. Every `delete` command (and
 any other confirmation-gated operation) requires `--yes`, or an interactive
-`[y/N]` confirmation prompt when running in a terminal.
+`[y/N]` confirmation prompt when running in a terminal. Every command also
+accepts `--idempotency-key`, an opaque key used to prevent duplicate-create
+retries.
+
+`profiles rules create` places new rules in the default rule folder (folder
+`pk` `0`) unless you pass `--group=<folder pk>`. Run
+`controldctl profiles folders list --profile-id=<id>` to see every folder's
+`pk`, and list a folder's rules with
+`controldctl profiles rules list --profile-id=<id> --folder-id=0`.
 
 ## Command tree
 

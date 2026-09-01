@@ -23,6 +23,13 @@ Every command, including every one documented below, accepts these
 persistent flags in addition to any command-specific flags listed in its own
 table:
 
+**Note on "Default" values:** Some flags are only sent to the server if you
+explicitly pass them; if omitted, the field is not sent and the server keeps
+the current value. Such flags are marked as "unset" in the Default column. By
+contrast, flags showing a concrete value like `true`, `false`, or `0` are sent
+on every request, even if you don't pass them, so omitting them resets the
+field to that concrete value.
+
 | Flag | Type | Default | Required | Description |
 |------|------|---------|----------|--------------|
 | `--api-token` | string | | No | ControlD API token (overrides `CONTROLD_API_TOKEN` and `--config`) |
@@ -75,9 +82,16 @@ Create a device.
 
 | Flag | Type | Default | Required | Description |
 |------|------|---------|----------|--------------|
+| `--ddns-ext-host` | string | | No | external DDNS hostname |
+| `--ddns-ext-status` | bool | unset | No | enable (`true`) or disable (`false`) external DDNS |
+| `--ddns-status` | bool | unset | No | enable (`true`) or disable (`false`) ControlD DDNS |
+| `--ddns-subdomain` | string | | No | ControlD DDNS subdomain |
 | `--icon` | string | `desktop-linux` | No | device icon name |
+| `--legacy-ipv4-status` | bool | unset | No | enable (`true`) or disable (`false`) the legacy IPv4 resolver |
 | `--name` | string | | Yes | device name |
 | `--profile-id` | string | | Yes | profile PK to assign |
+| `--remap-client-id` | string | | No | client ID to remap this device to |
+| `--remap-device-id` | string | | No | device PK to remap this device to |
 
 #### Example
 
@@ -98,7 +112,12 @@ Update a device.
 
 | Flag | Type | Default | Required | Description |
 |------|------|---------|----------|--------------|
+| `--ddns-ext-host` | string | | No | external DDNS hostname |
+| `--ddns-ext-status` | bool | unset | No | enable (`true`) or disable (`false`) external DDNS |
+| `--ddns-status` | bool | unset | No | enable (`true`) or disable (`false`) ControlD DDNS |
+| `--ddns-subdomain` | string | | No | ControlD DDNS subdomain |
 | `--device-id` | string | | Yes | device PK to update |
+| `--legacy-ipv4-status` | bool | unset | No | enable (`true`) or disable (`false`) the legacy IPv4 resolver |
 | `--name` | string | | No | new device name |
 | `--profile-id` | string | | No | new profile PK to assign |
 
@@ -189,7 +208,11 @@ Update a profile.
 
 | Flag | Type | Default | Required | Description |
 |------|------|---------|----------|--------------|
+| `--disable-ttl` | int | unset | No | disable (`1`) or keep (`0`) TTL on filtered responses |
+| `--lock-message` | string | | No | message shown when the profile is locked |
+| `--lock-status` | bool | unset | No | lock (`true`) or unlock (`false`) the profile |
 | `--name` | string | | No | new profile name |
+| `--password` | string | | No | password required to unlock the profile |
 | `--profile-id` | string | | Yes | profile PK to update |
 
 #### Example
@@ -383,12 +406,17 @@ controldctl profiles rules list \
 
 Create custom rules for one or more hostnames.
 
+When `--do=3` (redirect), `--via` is required and validated locally — the command will reject the request if you omit it.
+
 | Flag | Type | Default | Required | Description |
 |------|------|---------|----------|--------------|
 | `--do` | int | `0` | No | action: `0`=block, `1`=bypass, `2`=spoof, `3`=redirect |
 | `--enabled` | bool | `true` | No | enable (`true`) or disable (`false`) the rule |
+| `--group` | int | unset | No | rule folder PK to place the rules in (`0` = default folder) |
 | `--hostnames` | string | | Yes | comma-separated hostnames |
 | `--profile-id` | string | | Yes | profile PK |
+| `--via` | string | | No | IPv4 redirect target (required when `--do=3`) |
+| `--via-v6` | string | | No | IPv6 redirect target (used with `--do=3`) |
 
 #### Example
 
@@ -407,12 +435,17 @@ back empty) without creating anything.
 
 Update custom rules for one or more hostnames.
 
+This command replaces the entire rule: `--do` and `--enabled` are always sent to the server on every request. When using `--via`, `--via-v6`, or `--group`, you must explicitly pass both `--do` and `--enabled`, or the command will error rather than silently overwriting your rule's action and status.
+
 | Flag | Type | Default | Required | Description |
 |------|------|---------|----------|--------------|
 | `--do` | int | `0` | No | action: `0`=block, `1`=bypass, `2`=spoof, `3`=redirect |
 | `--enabled` | bool | `true` | No | enable (`true`) or disable (`false`) the rule |
+| `--group` | int | unset | No | rule folder PK to place the rules in (`0` = default folder) |
 | `--hostnames` | string | | Yes | comma-separated hostnames |
 | `--profile-id` | string | | Yes | profile PK |
+| `--via` | string | | No | IPv4 redirect target (required when `--do=3`) |
+| `--via-v6` | string | | No | IPv6 redirect target (used with `--do=3`) |
 
 #### Example
 
@@ -484,6 +517,7 @@ Create a rule folder.
 | `--enabled` | bool | `true` | No | enable (`true`) or disable (`false`) the folder |
 | `--name` | string | | Yes | folder name |
 | `--profile-id` | string | | Yes | profile PK |
+| `--via` | string | | No | IPv4 redirect target for rules in this folder (used with `--do=3`) |
 
 #### Example
 
@@ -504,10 +538,11 @@ Update a rule folder.
 
 | Flag | Type | Default | Required | Description |
 |------|------|---------|----------|--------------|
-| `--do` | int | `0` | No | default action for rules in this folder: `0`=block, `1`=bypass, `2`=spoof, `3`=redirect |
-| `--enabled` | bool | `true` | No | enable (`true`) or disable (`false`) the folder |
+| `--do` | int | unset | No | default action for rules in this folder: `0`=block, `1`=bypass, `2`=spoof, `3`=redirect |
+| `--enabled` | bool | unset | No | enable (`true`) or disable (`false`) the folder |
 | `--folder-id` | string | | Yes | folder ID to update |
 | `--profile-id` | string | | Yes | profile PK |
+| `--via` | string | | No | IPv4 redirect target for rules in this folder (used with `--do=3`) |
 
 #### Example
 

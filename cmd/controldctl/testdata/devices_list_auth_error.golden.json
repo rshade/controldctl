@@ -1,0 +1,1 @@
+{"error_code":"controld_authentication_failed","message":"invalid token","trace_id":"MASKED","tool":"controldctl","version":"v0.0.0-golden","schema_version":"1.0.0","actionable_fix":"re-authenticate: check CONTROLD_API_TOKEN","retryable":false}

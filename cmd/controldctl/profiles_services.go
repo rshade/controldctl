@@ -62,8 +62,8 @@ func newProfilesServicesListCommand(factory clientFactory) *cobra.Command {
 		Short: "List a profile's services",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if profileID == "" {
-				return ax.NewError(cmd.Context(), "validation_error", "--profile-id is required",
-					ax.WithErrorExitCode(ax.ExitValidation))
+				return validationError(cmd, "--profile-id is required",
+					"pass --profile-id with the profile PK")
 			}
 			client, err := factory(cmd)
 			if err != nil {
@@ -98,8 +98,8 @@ func newProfilesServicesUpdateCommand(factory clientFactory) *cobra.Command {
 		Short: "Set the block/bypass/spoof/redirect action for a service on a profile",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if profileID == "" || service == "" {
-				return ax.NewError(cmd.Context(), "validation_error", "--profile-id and --service are required",
-					ax.WithErrorExitCode(ax.ExitValidation))
+				return validationError(cmd, "--profile-id and --service are required",
+					"pass --profile-id with the profile PK and --service with the service PK")
 			}
 			client, err := factory(cmd)
 			if err != nil {

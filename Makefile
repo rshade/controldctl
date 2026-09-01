@@ -10,7 +10,11 @@ test:
 
 lint:
 	go vet ./...
-	gofmt -l .
+	@fmt_files=$$(gofmt -l .); \
+	if [ -n "$$fmt_files" ]; then \
+		echo "$$fmt_files"; \
+		exit 1; \
+	fi
 
 fmt:
 	gofmt -w .
