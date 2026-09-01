@@ -1,4 +1,4 @@
-.PHONY: build test lint fmt tidy
+.PHONY: build test lint fmt tidy race ci
 
 BINARY := controldctl
 
@@ -17,3 +17,8 @@ fmt:
 
 tidy:
 	go mod tidy
+
+race:
+	go test -race ./...
+
+ci: build lint race

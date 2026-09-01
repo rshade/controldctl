@@ -10,7 +10,6 @@ roadmap tracks hardening and the deferred scope from that build.
 
 ## Immediate Focus
 
-- [ ] #1 Add CI workflow (build, vet, gofmt, race-tested tests) [S]
 - [ ] #2 Makefile lint target can't fail on formatting issues [S]
 
 ## Near-Term Vision
@@ -48,6 +47,11 @@ roadmap tracks hardening and the deferred scope from that build.
   never actually wired up in `main.go`, so every prior build reported a
   placeholder version regardless of build flags. No tracking issue —
   done directly, same session as the initial build. Closed 2026-08-31.
+- [x] CI workflow: added `.github/workflows/ci.yml` running go build
+  (`CGO_ENABLED=0`), go vet, a gofmt check, golangci-lint, govulncheck, and
+  actionlint against the workflow itself, plus race-tested tests, on every
+  push to `main` and pull request, with concurrency cancellation and a Go
+  module/build cache. Closes #1. Closed 2026-08-31.
 
 ## Boundary Safeguards
 

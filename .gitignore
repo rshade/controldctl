@@ -7,3 +7,4 @@
 .env
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
+/PR_MESSAGE.md

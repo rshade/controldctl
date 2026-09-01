@@ -18,12 +18,21 @@ make test    # go test ./...
 make lint    # go vet ./... && gofmt -l .
 make fmt     # gofmt -w .
 make tidy    # go mod tidy
+make race    # go test -race ./...
+make ci      # runs build, lint, and race — a subset of what CI checks
 ```
 
 Run `make fmt` before `make lint` — `gofmt -l .` only _lists_ files that
-aren't formatted, it doesn't fix them. `make lint` must report no output
-(both `go vet` and `gofmt -l`) and `make test` must pass before you open a
-PR.
+aren't formatted, it doesn't fix them, and (tracked as roadmap #2) `make
+lint` doesn't yet fail on its own when files are listed, so treat any
+output as a failure regardless of exit code. `make lint` must report no
+output (both `go vet` and `gofmt -l`), and `make race` must pass to catch
+data races before you open a PR. Alternatively, run `make ci` to execute
+build, lint, and the race-tested suite together. CI runs these same checks
+automatically on every push to `main` and pull request via
+`.github/workflows/ci.yml`, plus `golangci-lint`, `govulncheck`, and
+`actionlint` against the workflow itself — `make ci` is a useful local
+subset, not full parity, aside from the gofmt-enforcement gap above.
 
 ## Adding a new resource command
 
@@ -367,7 +376,7 @@ chore: rename module to github.com/rshade/controldctl
 Use `feat:`, `fix:`, `docs:`, `refactor:`, `build:`, `chore:`, or `test:` as
 appropriate, with a short imperative summary. Before opening a PR:
 
-- `make fmt && make lint && make test` all pass cleanly.
+- `make ci` passes cleanly (or equivalently, `make build && make lint && make race` all pass).
 - New commands have test coverage for both the success path and required-flag
   validation, following the pattern above.
 - The `README.md` command tree and any usage examples are updated if the

@@ -1,0 +1,10 @@
+{
+  // OpenSpec generates proposal/spec/task markdown from a fixed template
+  // (## Purpose / ### Requirement / #### Scenario headings with no blank
+  // line before their body) that structurally violates MD041/MD022/MD032
+  // and will keep doing so on every future `openspec propose`/`sync`/
+  // `archive` run. Exempt the whole tree rather than hand-patching
+  // content a tool regenerates.
+  "config": ".markdownlint.json",
+  "ignores": ["openspec/**"]
+}
