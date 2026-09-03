@@ -124,9 +124,9 @@ func newProfilesFoldersCreateCommand(factory clientFactory) *cobra.Command {
 			if err != nil {
 				return controld.MapError(cmd.Context(), err)
 			}
-			var payload foldersListPayload
+			var payload *foldersListPayload
 			if ran {
-				payload = foldersListPayload{Groups: toGroupPayloads(result)}
+				payload = &foldersListPayload{Groups: toGroupPayloads(result)}
 			}
 			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
 		},
@@ -183,9 +183,9 @@ func newProfilesFoldersUpdateCommand(factory clientFactory) *cobra.Command {
 			if err != nil {
 				return controld.MapError(cmd.Context(), err)
 			}
-			var payload foldersListPayload
+			var payload *foldersListPayload
 			if ran {
-				payload = foldersListPayload{Groups: toGroupPayloads(result)}
+				payload = &foldersListPayload{Groups: toGroupPayloads(result)}
 			}
 			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
 		},

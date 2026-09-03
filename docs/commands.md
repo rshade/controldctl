@@ -46,9 +46,28 @@ Two of these matter enough to call out for every mutating command below:
   `delete` command, plus `profiles options update`, `profiles filters
   update`, and `profiles services update`). The command still validates
   flags and resolves credentials, and it still returns the normal JSON
-  envelope, but the `data` fields reflect an operation that did not run and
-  `meta.dry_run` is `true`. Read-only `list`/`types` commands ignore
-  `--dry-run` because they have no side effect to suppress.
+  envelope, with `meta.dry_run` set to `true`. Read-only `list`/`types`
+  commands ignore `--dry-run` because they have no side effect to suppress.
+
+  `data` takes one of two shapes under `--dry-run`, and which one you get
+  depends on where the payload would have come from:
+
+  - **`data` is `null`** when the payload would have been state returned by
+    the ControlD API — every `create` and `update` that echoes back the
+    created or updated object (`devices`, `profiles`, `profiles rules`,
+    `profiles folders`). Nothing was fetched, so there is nothing to report.
+  - **`data` is an identity-only payload with a `false` past-tense flag**
+    when the payload is built entirely from flags you already passed — every
+    `delete` (`"deleted": false`) plus `profiles options/filters/services
+    update` (`"updated": false`). These stay populated so a dry run still
+    tells you _which_ object would have been affected, but only the
+    identifying fields (e.g. `profile_id`, `service`) are present — the
+    requested change itself (`--do`, `--enabled`, `--value`, etc.) is never
+    echoed back, so `data` must not be treated as a preview of the pending
+    change.
+
+  In both cases `meta.dry_run` is the authoritative signal; do not infer a
+  dry run from the shape of `data`.
 - **`--yes`** is required by the four commands gated on explicit
   confirmation: `devices delete`, `profiles delete`, `profiles rules
   delete`, and `profiles folders delete`. In machine mode (`--format=json`,
@@ -104,7 +123,7 @@ controldctl devices create \
 ```
 
 **Dry-run:** supported. `--dry-run` returns the envelope without creating
-the device; `data` fields come back zero-valued and `meta.dry_run` is `true`.
+the device; `data` is `null` and `meta.dry_run` is `true`.
 
 ### `controldctl devices update`
 
@@ -131,7 +150,7 @@ controldctl devices update \
 ```
 
 **Dry-run:** supported. `--dry-run` returns the envelope without applying
-the update.
+the update; `data` is `null`.
 
 ### `controldctl devices delete`
 
@@ -200,7 +219,7 @@ controldctl profiles create --name "Kids - Weekday" --format=json
 ```
 
 **Dry-run:** supported. `--dry-run` returns the envelope without creating
-the profile.
+the profile; `data` is `null`.
 
 ### `controldctl profiles update`
 
@@ -225,7 +244,7 @@ controldctl profiles update \
 ```
 
 **Dry-run:** supported. `--dry-run` returns the envelope without applying
-the update.
+the update; `data` is `null`.
 
 ### `controldctl profiles delete`
 
@@ -428,8 +447,8 @@ controldctl profiles rules create \
   --format=json
 ```
 
-**Dry-run:** supported. `--dry-run` returns the envelope (`data.rules` comes
-back empty) without creating anything.
+**Dry-run:** supported. `--dry-run` returns the envelope (`data` is `null`)
+without creating anything.
 
 ### `controldctl profiles rules update`
 
@@ -458,7 +477,7 @@ controldctl profiles rules update \
 ```
 
 **Dry-run:** supported. `--dry-run` returns the envelope without applying
-the update.
+the update; `data` is `null`.
 
 ### `controldctl profiles rules delete`
 
@@ -530,7 +549,7 @@ controldctl profiles folders create \
 ```
 
 **Dry-run:** supported. `--dry-run` returns the envelope without creating
-the folder.
+the folder; `data` is `null`.
 
 ### `controldctl profiles folders update`
 
@@ -555,7 +574,7 @@ controldctl profiles folders update \
 ```
 
 **Dry-run:** supported. `--dry-run` returns the envelope without applying
-the update.
+the update; `data` is `null`.
 
 ### `controldctl profiles folders delete`
 

@@ -155,41 +155,6 @@ func TestProfilesFoldersCreateRequiresProfileIDAndName(t *testing.T) {
 	}
 }
 
-func TestProfilesFoldersCreateDryRunSkipsRealCall(t *testing.T) {
-	called := false
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		called = true
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"success": true, "body": {"groups": []}}`))
-	}))
-	defer server.Close()
-
-	root := newRootCommand(testFactory(t, server))
-	root.SetArgs([]string{
-		"profiles", "folders", "create",
-		"--profile-id=p1", "--name=Ads", "--dry-run", "--format=json",
-	})
-
-	var stdout, stderr bytes.Buffer
-	code := ax.Execute(context.Background(), root,
-		ax.WithStdout(&stdout),
-		ax.WithStderr(&stderr),
-		ax.WithEnv(func(string) string { return "" }),
-	)
-	if code != ax.ExitSuccess {
-		t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr.String())
-	}
-	if called {
-		t.Fatal("expected the real API call to be skipped under --dry-run")
-	}
-	if !bytes.Contains(stdout.Bytes(), []byte(`"groups":null`)) {
-		t.Fatalf("expected groups:null in dry-run output: %s", stdout.String())
-	}
-	if !bytes.Contains(stdout.Bytes(), []byte(`"dry_run":true`)) {
-		t.Fatalf("expected dry_run:true in dry-run output: %s", stdout.String())
-	}
-}
-
 func TestProfilesFoldersUpdateWritesEnvelope(t *testing.T) {
 	var gotMethod, gotPath string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

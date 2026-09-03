@@ -90,6 +90,18 @@ func jsonResponse(body string) http.HandlerFunc {
 	}
 }
 
+// dryRunShape pins which --dry-run payload shape a command must produce.
+// shapeUnset is the zero value so a case that forgets to declare one fails
+// loudly instead of silently skipping its dry-run subtest.
+type dryRunShape int
+
+const (
+	shapeUnset dryRunShape = iota
+	shapeNone
+	shapeNull
+	shapeIdentity
+)
+
 // TestGoldenCommandEnvelopes pins the exact stdout envelope of every
 // success-path command against checked-in fixtures, mirroring the golden
 // convention of ax-go's examples/integration. The canned API bodies match the
@@ -106,10 +118,12 @@ func TestGoldenCommandEnvelopes(t *testing.T) {
 		name    string
 		args    []string
 		handler http.HandlerFunc
+		shape   dryRunShape
 	}{
 		{
-			name: "devices_list",
-			args: []string{"devices", "list", "--format=json"},
+			name:  "devices_list",
+			shape: shapeNone,
+			args:  []string{"devices", "list", "--format=json"},
 			handler: jsonResponse(`{
 				"success": true,
 				"body": {
@@ -125,22 +139,26 @@ func TestGoldenCommandEnvelopes(t *testing.T) {
 		},
 		{
 			name:    "devices_create",
+			shape:   shapeNull,
 			args:    []string{"devices", "create", "--name=laptop", "--profile-id=p1", "--format=json"},
 			handler: jsonResponse(deviceBody),
 		},
 		{
 			name:    "devices_update",
+			shape:   shapeNull,
 			args:    []string{"devices", "update", "--device-id=dev1", "--name=renamed", "--format=json"},
 			handler: jsonResponse(deviceBody),
 		},
 		{
 			name:    "devices_delete",
+			shape:   shapeIdentity,
 			args:    []string{"devices", "delete", "--device-id=dev1", "--yes", "--format=json"},
 			handler: jsonResponse(`{"success": true, "body": []}`),
 		},
 		{
-			name: "devices_types",
-			args: []string{"devices", "types", "--format=json"},
+			name:  "devices_types",
+			shape: shapeNone,
+			args:  []string{"devices", "types", "--format=json"},
 			handler: jsonResponse(`{"success": true, "body": {"types": {
 				"os": {"name": "macOS", "icons": {}},
 				"browser": {"name": "Chrome", "icons": {}},
@@ -150,38 +168,45 @@ func TestGoldenCommandEnvelopes(t *testing.T) {
 		},
 		{
 			name:    "profiles_list",
+			shape:   shapeNone,
 			args:    []string{"profiles", "list", "--format=json"},
 			handler: jsonResponse(`{"success": true, "body": {"profiles": [{"PK": "p1", "updated": 1700000000, "name": "Home"}]}}`),
 		},
 		{
 			name:    "profiles_create",
+			shape:   shapeNull,
 			args:    []string{"profiles", "create", "--name=Kids", "--format=json"},
 			handler: jsonResponse(`{"success": true, "body": {"profiles": [{"PK": "p2", "updated": 1700000000, "name": "Kids"}]}}`),
 		},
 		{
 			name:    "profiles_update",
+			shape:   shapeNull,
 			args:    []string{"profiles", "update", "--profile-id=p1", "--name=Renamed", "--format=json"},
 			handler: jsonResponse(`{"success": true, "body": {"profiles": [{"PK": "p1", "updated": 1700000000, "name": "Renamed"}]}}`),
 		},
 		{
 			name:    "profiles_delete",
+			shape:   shapeIdentity,
 			args:    []string{"profiles", "delete", "--profile-id=p1", "--yes", "--format=json"},
 			handler: jsonResponse(`{"success": true, "body": []}`),
 		},
 		{
-			name: "profiles_options_list",
-			args: []string{"profiles", "options", "list", "--format=json"},
+			name:  "profiles_options_list",
+			shape: shapeNone,
+			args:  []string{"profiles", "options", "list", "--format=json"},
 			handler: jsonResponse(`{"success": true, "body": {"options": [
 				{"PK": "opt1", "title": "Block Page", "description": "d", "type": "toggle", "default_value": false, "info_url": ""}]}}`),
 		},
 		{
 			name:    "profiles_options_update",
+			shape:   shapeIdentity,
 			args:    []string{"profiles", "options", "update", "--profile-id=p1", "--name=block_page", "--format=json"},
 			handler: jsonResponse(`{"success": true, "body": {"options": true}}`),
 		},
 		{
-			name: "profiles_filters_list",
-			args: []string{"profiles", "filters", "list", "--profile-id=p1", "--format=json"},
+			name:  "profiles_filters_list",
+			shape: shapeNone,
+			args:  []string{"profiles", "filters", "list", "--profile-id=p1", "--format=json"},
 			handler: jsonResponse(`{"success": true, "body": {"filters": [{
 				"PK": "custom1",
 				"name": "Custom",
@@ -196,23 +221,27 @@ func TestGoldenCommandEnvelopes(t *testing.T) {
 		},
 		{
 			name:    "profiles_filters_update",
+			shape:   shapeIdentity,
 			args:    []string{"profiles", "filters", "update", "--profile-id=p1", "--filter=ads", "--format=json"},
 			handler: jsonResponse(`{"success": true, "body": {"filters": null}}`),
 		},
 		{
-			name: "profiles_folders_list",
-			args: []string{"profiles", "folders", "list", "--profile-id=p1", "--format=json"},
+			name:  "profiles_folders_list",
+			shape: shapeNone,
+			args:  []string{"profiles", "folders", "list", "--profile-id=p1", "--format=json"},
 			handler: jsonResponse(`{"success": true, "body": {"groups": [
 				{"PK": 0, "group": "Default", "action": {"status": 1}, "count": 3}]}}`),
 		},
 		{
-			name: "profiles_folders_create",
-			args: []string{"profiles", "folders", "create", "--profile-id=p1", "--name=Ads", "--format=json"},
+			name:  "profiles_folders_create",
+			shape: shapeNull,
+			args:  []string{"profiles", "folders", "create", "--profile-id=p1", "--name=Ads", "--format=json"},
 			handler: jsonResponse(`{"success": true, "body": {"groups": [
 				{"PK": 42, "group": "Ads", "action": {"status": 1}, "count": 0}]}}`),
 		},
 		{
-			name: "profiles_folders_update",
+			name:  "profiles_folders_update",
+			shape: shapeNull,
 			args: []string{
 				"profiles", "folders", "update",
 				"--profile-id=p1", "--folder-id=f1", "--do=1", "--enabled=false", "--format=json",
@@ -221,7 +250,8 @@ func TestGoldenCommandEnvelopes(t *testing.T) {
 				{"PK": 42, "group": "Ads", "action": {"status": 0, "do": 1}, "count": 0}]}}`),
 		},
 		{
-			name: "profiles_folders_delete",
+			name:  "profiles_folders_delete",
+			shape: shapeIdentity,
 			args: []string{
 				"profiles", "folders", "delete",
 				"--profile-id=p1", "--folder-id=f1", "--yes", "--format=json",
@@ -229,13 +259,15 @@ func TestGoldenCommandEnvelopes(t *testing.T) {
 			handler: jsonResponse(`{"success": true, "body": []}`),
 		},
 		{
-			name: "profiles_rules_list",
-			args: []string{"profiles", "rules", "list", "--profile-id=p1", "--folder-id=f1", "--format=json"},
+			name:  "profiles_rules_list",
+			shape: shapeNone,
+			args:  []string{"profiles", "rules", "list", "--profile-id=p1", "--folder-id=f1", "--format=json"},
 			handler: jsonResponse(`{"success": true, "body": {"rules": [
 				{"PK": "example.com", "order": 0, "group": 0, "action": {"do": 0, "status": 1}}]}}`),
 		},
 		{
-			name: "profiles_rules_create",
+			name:  "profiles_rules_create",
+			shape: shapeNull,
 			args: []string{
 				"profiles", "rules", "create",
 				"--profile-id=p1", "--hostnames=example.com,example.org", "--format=json",
@@ -243,7 +275,8 @@ func TestGoldenCommandEnvelopes(t *testing.T) {
 			handler: jsonResponse(`{"success": true, "body": {"rules": [{"do": 0, "status": 1, "order": 1}]}}`),
 		},
 		{
-			name: "profiles_rules_update",
+			name:  "profiles_rules_update",
+			shape: shapeNull,
 			args: []string{
 				"profiles", "rules", "update",
 				"--profile-id=p1", "--hostnames=example.com", "--do=1", "--format=json",
@@ -251,7 +284,8 @@ func TestGoldenCommandEnvelopes(t *testing.T) {
 			handler: jsonResponse(`{"success": true, "body": {"rules": [{"do": 1, "status": 1, "order": 1, "group": 0}]}}`),
 		},
 		{
-			name: "profiles_rules_delete",
+			name:  "profiles_rules_delete",
+			shape: shapeIdentity,
 			args: []string{
 				"profiles", "rules", "delete",
 				"--profile-id=p1", "--hostname=example.com", "--yes", "--format=json",
@@ -259,14 +293,16 @@ func TestGoldenCommandEnvelopes(t *testing.T) {
 			handler: jsonResponse(`{"success": true, "body": []}`),
 		},
 		{
-			name: "profiles_services_list",
-			args: []string{"profiles", "services", "list", "--profile-id=p1", "--format=json"},
+			name:  "profiles_services_list",
+			shape: shapeNone,
+			args:  []string{"profiles", "services", "list", "--profile-id=p1", "--format=json"},
 			handler: jsonResponse(`{"success": true, "body": {"services": [
 				{"PK": "netflix", "name": "Netflix", "category": "streaming", "unlock_location": "",
 				 "action": {"do": 0, "status": 1}}]}}`),
 		},
 		{
-			name: "profiles_services_update",
+			name:  "profiles_services_update",
+			shape: shapeIdentity,
 			args: []string{
 				"profiles", "services", "update",
 				"--profile-id=p1", "--service=netflix", "--do=1", "--format=json",
@@ -282,6 +318,45 @@ func TestGoldenCommandEnvelopes(t *testing.T) {
 				t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr)
 			}
 			assertGolden(t, tc.name+".golden.json", maskNonDeterministic(stdout))
+		})
+
+		if tc.shape == shapeUnset {
+			t.Errorf("%s: dry-run shape not declared", tc.name)
+			continue
+		}
+		if tc.shape == shapeNone {
+			continue
+		}
+		t.Run(tc.name+"_dryrun", func(t *testing.T) {
+			stdout, stderr, code := runGolden(t, func(http.ResponseWriter, *http.Request) {
+				t.Errorf("dry-run performed a real API call")
+			}, append(append([]string(nil), tc.args...), "--dry-run"))
+			if code != ax.ExitSuccess {
+				t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr)
+			}
+
+			switch tc.shape {
+			case shapeNull:
+				if !bytes.Contains(stdout, []byte(`"data":null`)) {
+					t.Fatalf("expected data:null in dry-run output: %s", stdout)
+				}
+			case shapeIdentity:
+				hasFalseFlag := bytes.Contains(stdout, []byte(`"deleted":false`)) ||
+					bytes.Contains(stdout, []byte(`"updated":false`))
+				hasTrueFlag := bytes.Contains(stdout, []byte(`"deleted":true`)) ||
+					bytes.Contains(stdout, []byte(`"updated":true`))
+				if !hasFalseFlag {
+					t.Fatalf("expected a false past-tense flag (deleted:false or updated:false) "+
+						"in dry-run output: %s", stdout)
+				}
+				if hasTrueFlag {
+					t.Fatalf("dry-run output must not report a true past-tense flag: %s", stdout)
+				}
+			default:
+				t.Fatalf("%s: unexpected dry-run shape %d", tc.name, tc.shape)
+			}
+
+			assertGolden(t, tc.name+"_dryrun.golden.json", maskNonDeterministic(stdout))
 		})
 	}
 }

@@ -138,9 +138,9 @@ func newProfilesRulesCreateCommand(factory clientFactory) *cobra.Command {
 			if err != nil {
 				return controld.MapError(cmd.Context(), err)
 			}
-			var payload customRulesPayload
+			var payload *customRulesPayload
 			if ran {
-				payload = customRulesPayload{Rules: result}
+				payload = &customRulesPayload{Rules: result}
 			}
 			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
 		},
@@ -208,9 +208,9 @@ func newProfilesRulesUpdateCommand(factory clientFactory) *cobra.Command {
 			if err != nil {
 				return controld.MapError(cmd.Context(), err)
 			}
-			var payload customRulesPayload
+			var payload *customRulesPayload
 			if ran {
-				payload = customRulesPayload{Rules: result}
+				payload = &customRulesPayload{Rules: result}
 			}
 			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
 		},

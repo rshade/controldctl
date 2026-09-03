@@ -266,7 +266,17 @@ ran, err := ax.Guard(cmd.Context(), func(ctx context.Context) error {
 
 `ax.Guard` skips the callback entirely when `--dry-run` is active, returning
 `(false, nil)` instead — the command still emits its response envelope, just
-with `ran == false` and an empty/zero-value payload.
+with `ran == false`.
+
+Because `ax.Guard` leaves each call site holding a zero-value result, the
+"nothing happened" payload is a deliberate per-command choice rather than
+something the helper decides. Commands whose payload would have been
+API-returned state declare it as a pointer (`var payload *devicePayload`) and
+leave it `nil`, so `data` marshals to `null`. Commands whose payload is built
+from the caller's own flags keep it a value type and pass `ran` straight
+through as the `deleted`/`updated` field, so a dry run still names the object
+it would have touched. See the `--dry-run` section of `docs/commands.md` for
+the user-facing contract.
 
 Every `delete` command adds a second gate in front of `ax.Guard`:
 `ax.Confirm`, which requires `--yes` (or an interactive `[y/N]` prompt in

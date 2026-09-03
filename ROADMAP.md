@@ -22,7 +22,6 @@ roadmap tracks hardening and the deferred scope from that build.
 
 - [ ] #6 Scope and design the Account/Org resource surface (Users, Billing, Network Stats, Access/IP logs, org impersonation) [L]
 - [ ] #7 Add deferred optional flags per resource (DDNS, legacy-IPv4, lock_status, via/group/order) [M]
-- [ ] #8 Normalize dry-run "nothing happened" payload shape across resources [S]
 - [ ] #9 Improve validation-error actionable_fix coverage (1/20 currently) [S]
 - [ ] #10 README polish: mention --idempotency-key, hint at rules create's --folder-id=0 default [S]
 
@@ -47,6 +46,23 @@ roadmap tracks hardening and the deferred scope from that build.
   never actually wired up in `main.go`, so every prior build reported a
   placeholder version regardless of build flags. No tracking issue —
   done directly, same session as the initial build. Closed 2026-08-31.
+- [x] Normalized the `--dry-run` "nothing happened" payload shape. The three
+  shapes collapsed to two principled ones: `data` is `null` when the payload
+  would have been API-returned state (`devices`/`profiles`/`profiles rules`/
+  `profiles folders` create and update), and is an identity-only payload with
+  a `false` past-tense flag when the payload is built from the caller's own
+  flags (every `delete`, plus `profiles options/filters/services update`) —
+  present only to name the object a dry run would have touched, never the
+  requested change itself. The `"pk":""` zero-valued device case the issue
+  flagged was already fixed by 7b63b5e; the live drift was `data: null` vs
+  `data: {"rules": null}`. Dry-run-only — `&x` and `x` marshal identically, so
+  the 24 pre-existing success-path golden fixtures were unchanged. Dry-run
+  coverage was folded into the golden table instead of hand-written
+  per-command tests: every mutating case now declares a `dryRunShape`,
+  adding an automatic `<name>_dryrun` subtest against one of 15 new
+  fixtures covering every mutating command, and a case that omits the
+  shape fails the build. Closes #8.
+  Closed 2026-09-01.
 - [x] CI workflow: added `.github/workflows/ci.yml` running go build
   (`CGO_ENABLED=0`), go vet, a gofmt check, golangci-lint, govulncheck, and
   actionlint against the workflow itself, plus race-tested tests, on every

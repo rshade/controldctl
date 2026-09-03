@@ -104,9 +104,10 @@ func newProfilesCreateCommand(factory clientFactory) *cobra.Command {
 			if err != nil {
 				return controld.MapError(cmd.Context(), err)
 			}
-			var payload profilesListPayload
+			var payload *profilesListPayload
 			if ran {
-				payload = toProfilesListPayload(result)
+				profiles := toProfilesListPayload(result)
+				payload = &profiles
 			}
 			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
 		},
@@ -162,9 +163,10 @@ func newProfilesUpdateCommand(factory clientFactory) *cobra.Command {
 			if err != nil {
 				return controld.MapError(cmd.Context(), err)
 			}
-			var payload profilesListPayload
+			var payload *profilesListPayload
 			if ran {
-				payload = toProfilesListPayload(result)
+				profiles := toProfilesListPayload(result)
+				payload = &profiles
 			}
 			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
 		},

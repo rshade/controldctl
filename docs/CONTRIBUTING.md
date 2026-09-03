@@ -231,6 +231,38 @@ return ax.WriteJSON(cmd.OutOrStdout(),
 `...Updated`/`...Deleted` field in the response payload is set from it
 rather than hardcoded `true`.
 
+This value-type shape is correct when the payload is built entirely from
+flags already in scope — every `delete` and `profiles
+options/filters/services update`. It is the wrong choice for a `create` or
+`update` that echoes back state the API returned, because under `--dry-run`
+no API call happens and there is no state to report; reusing the value-type
+pattern there would silently produce a zero-valued struct instead of an
+honest empty response. For those commands, hold the payload as a pointer and
+only populate it when `ran` is `true`, as `devices create` does:
+
+```go
+var result controld.Device
+ran, err := ax.Guard(cmd.Context(), func(ctx context.Context) error {
+    var createErr error
+    result, createErr = client.CreateDevice(ctx, params)
+    return createErr
+})
+if err != nil {
+    return controld.MapError(cmd.Context(), err)
+}
+var payload *devicePayload
+if ran {
+    device := toDevicePayload(result)
+    payload = &device
+}
+return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
+```
+
+`ax.NewEnvelope` marshals a `nil` pointer to `data: null`, which is the
+contract documented for `--dry-run` under **Global flags** in
+`docs/commands.md` — see that section for the full breakdown of which
+commands use which shape.
+
 For `delete` specifically, gate on `ax.Confirm` (and, in human mode, the
 `promptForConfirmation` helper from `root.go`) _before_ reaching
 `ax.Guard`, so a user is never prompted for a call that `--dry-run` would
@@ -269,6 +301,19 @@ In machine mode (`--format=json`) without `--yes`, `ax.Confirm` returns
 command never reaches the client or the guard. In human mode without
 `--yes`, it returns `ConfirmationPromptRequired` and the command owns
 prompting the user itself.
+
+Every mutating command also needs a case in the golden table
+(`cmd/controldctl/golden_test.go`) with its `dryRunShape` declared:
+`shapeNull` when the payload echoes API-returned state, `shapeIdentity` when
+it's built from the caller's flags, and `shapeNone` for read-only commands.
+The zero value, `shapeUnset`, deliberately fails the test with "dry-run shape
+not declared" — the shape must be declared explicitly so the dry-run contract
+can't silently regress when a new command lands without coverage. Regenerate
+fixtures for a new or changed case with:
+
+```bash
+go test ./cmd/controldctl -run TestGolden -update
+```
 
 ### 6. Mount the command in its parent
 
