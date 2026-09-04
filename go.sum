@@ -1,5 +1,7 @@
 github.com/baptistecdr/controld-go v0.0.10 h1:BTTqNt1gj9PPo4CT4PWaegblpad5Wm1tOPYH45MXxMc=
 github.com/baptistecdr/controld-go v0.0.10/go.mod h1:dlTVa098d8YoYHAFlbjN69uZdXZqkP4JkljOY9rc6EI=
+github.com/baptistecdr/controld-go v0.0.11 h1:MVG4t26u1ClSL/NfRCfl4fD6LeyFdIXERVERfjReWF4=
+github.com/baptistecdr/controld-go v0.0.11/go.mod h1:Rv2d6T+npzphszVRiQsRP2kw08OLQFLMzOXSLeHricg=
 github.com/cenkalti/backoff/v5 v5.0.3 h1:ZN+IMa753KfX5hd8vVaMixjnqRZ3y8CuJKRKj1xcsSM=
 github.com/cenkalti/backoff/v5 v5.0.3/go.mod h1:rkhZdG3JZukswDf7f0cwqPNk4K0sa+F97BxZthm/crw=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=

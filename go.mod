@@ -3,7 +3,7 @@ module github.com/rshade/controldctl
 go 1.26.7
 
 require (
-	github.com/baptistecdr/controld-go v0.0.10
+	github.com/baptistecdr/controld-go v0.0.11
 	github.com/rshade/ax-go v0.5.0
 	github.com/spf13/cobra v1.10.2
 )
