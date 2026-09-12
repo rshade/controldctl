@@ -3,7 +3,7 @@ module github.com/rshade/controldctl
 go 1.26.7
 
 require (
-	github.com/baptistecdr/controld-go v0.0.11
+	github.com/baptistecdr/controld-go v0.0.12
 	github.com/rshade/ax-go v0.5.0
 	github.com/spf13/cobra v1.10.2
 )
@@ -45,7 +45,7 @@ require (
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
-	golang.org/x/time v0.15.0 // indirect
+	golang.org/x/time v0.16.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260819154853-08b0e4226688 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260825221802-da73d73af1c5 // indirect
 	google.golang.org/grpc v1.83.2 // indirect
