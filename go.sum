@@ -2,6 +2,8 @@ github.com/baptistecdr/controld-go v0.0.10 h1:BTTqNt1gj9PPo4CT4PWaegblpad5Wm1tOP
 github.com/baptistecdr/controld-go v0.0.10/go.mod h1:dlTVa098d8YoYHAFlbjN69uZdXZqkP4JkljOY9rc6EI=
 github.com/baptistecdr/controld-go v0.0.11 h1:MVG4t26u1ClSL/NfRCfl4fD6LeyFdIXERVERfjReWF4=
 github.com/baptistecdr/controld-go v0.0.11/go.mod h1:Rv2d6T+npzphszVRiQsRP2kw08OLQFLMzOXSLeHricg=
+github.com/baptistecdr/controld-go v0.0.13 h1:T5jMNkBYwyfdQ2Zt59YFbNcgaXZrNyqV5xHwar1Dsg4=
+github.com/baptistecdr/controld-go v0.0.13/go.mod h1:1ZQ0wj3gX+Aul5RpMjwd2GmJa5SVNvbZrq6es7sdKtU=
 github.com/cenkalti/backoff/v5 v5.0.3 h1:ZN+IMa753KfX5hd8vVaMixjnqRZ3y8CuJKRKj1xcsSM=
 github.com/cenkalti/backoff/v5 v5.0.3/go.mod h1:rkhZdG3JZukswDf7f0cwqPNk4K0sa+F97BxZthm/crw=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
@@ -16,6 +18,8 @@ github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=
 github.com/go-logr/stdr v1.2.2/go.mod h1:mMo/vtBO5dYbehREoey6XUKy/eSumjCCveDpRre4VKE=
 github.com/goccy/go-json v0.10.6 h1:p8HrPJzOakx/mn/bQtjgNjdTcN+/S6FcG2CTtQOrHVU=
 github.com/goccy/go-json v0.10.6/go.mod h1:oq7eo15ShAhp70Anwd5lgX2pLfOS3QCiwU/PULtXL6M=
+github.com/goccy/go-json v0.11.2 h1:jdZv93Tt4ioR8yW1CoNsvSxrcZlCXAUU1aZXN7gpXUA=
+github.com/goccy/go-json v0.11.2/go.mod h1:3NdmfEkZlB7YI5UFw/qdFKq8XN1aiWR0YyRPWZNQltY=
 github.com/golang-jwt/jwt/v5 v5.3.1 h1:kYf81DTWFe7t+1VvL7eS+jKFVWaUnK9cB1qbwn63YCY=
 github.com/golang-jwt/jwt/v5 v5.3.1/go.mod h1:fxCRLWMO43lRc8nhHWY6LGqRcf+1gQWArsqaEUEa5bE=
 github.com/golang/protobuf v1.5.4 h1:i7eJL8qZTpSEXOPTxNKhASYpMn+8e5Q6AdndVa1dWek=
