@@ -3,7 +3,7 @@ module github.com/rshade/controldctl
 go 1.27.3
 
 require (
-	github.com/baptistecdr/controld-go v0.0.11
+	github.com/baptistecdr/controld-go v0.0.13
 	github.com/rshade/ax-go v0.10.0
 	github.com/spf13/cobra v1.10.2
 )
@@ -14,7 +14,7 @@ require (
 	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/goccy/go-json v0.10.6 // indirect
+	github.com/goccy/go-json v0.11.2 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/google/jsonschema-go v0.4.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect
