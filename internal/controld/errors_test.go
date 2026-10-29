@@ -134,20 +134,26 @@ func TestMapErrorClassifiesWrappedUpstreamErrors(t *testing.T) {
 
 // TestMapErrorHandlesVendorRetryExhaustion exercises controld-go's real HTTP
 // retry loop (not a hand-built typed error): the loop intercepts 429s and
-// 5xxs itself, retries a couple of times against a fake server, then gives up
-// and returns a plain error. This is the regression test for that class of
-// bug — the table above only proves MapError's errors.As branches work
-// against typed errors constructed directly, which never happens for a real
-// rate-limit or outage response.
+// 5xxs itself, retries against a fake server, then gives up. The table above
+// only proves MapError's errors.As branches work against typed errors
+// constructed directly; this proves they fire on the path a real rate limit
+// or outage actually takes.
+//
+// Until the fork fix this was impossible — the retry loop discarded the typed
+// error and returned a plain string, so MapError had to fall back to
+// substring matching. Asserting the error code here, not just the exit code,
+// is what pins that the typed branch is the one doing the work: both classes
+// share ExitNetwork, and only the code distinguishes them.
 func TestMapErrorHandlesVendorRetryExhaustion(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
 		name       string
 		statusCode int
+		wantCode   string
 	}{
-		{"repeated 500s exhaust the vendor's retries", http.StatusInternalServerError},
-		{"repeated 429s exhaust the vendor's retries", http.StatusTooManyRequests},
+		{"repeated 500s exhaust the vendor's retries", http.StatusInternalServerError, "controld_upstream_unavailable"},
+		{"repeated 429s exhaust the vendor's retries", http.StatusTooManyRequests, "controld_rate_limited"},
 	}
 
 	for _, tt := range tests {
@@ -177,6 +183,9 @@ func TestMapErrorHandlesVendorRetryExhaustion(t *testing.T) {
 			}
 			if axErr.ExitCode() != ax.ExitNetwork {
 				t.Errorf("exit code = %d, want %d (ExitNetwork)", axErr.ExitCode(), ax.ExitNetwork)
+			}
+			if axErr.ErrorCode != tt.wantCode {
+				t.Errorf("error code = %q, want %q", axErr.ErrorCode, tt.wantCode)
 			}
 			if axErr.Retryable == nil || !*axErr.Retryable {
 				t.Errorf("retryable = %v, want true", axErr.Retryable)

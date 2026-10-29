@@ -37,14 +37,16 @@ field to that concrete value.
 | `--dry-run` | bool | `false` | No | emit the envelope without side effects |
 | `--format` | string | | No | output format: `json` or `human` |
 | `--idempotency-key` | string | | No | opaque key used to prevent duplicate-create retries |
+| `--org-id` | string | | No | ControlD sub-organization to act as (overrides `CONTROLD_ORG_ID` and `--config`); while set, every mutation requires `--yes` |
 | `--yes` | bool | `false` | No | confirm a confirmation-gated operation |
 
 Two of these matter enough to call out for every mutating command below:
 
 - **`--dry-run`** suppresses the underlying API call for every command that
   creates, updates, or deletes something (every `create`, `update`, and
-  `delete` command, plus `profiles options update`, `profiles filters
-  update`, and `profiles services update`). The command still validates
+  `delete` command, plus `access learn`, `profiles options update`,
+  `profiles filters update`, and `profiles services update`). The command
+  still validates
   flags and resolves credentials, and it still returns the normal JSON
   envelope, with `meta.dry_run` set to `true`. Read-only `list`/`types`
   commands ignore `--dry-run` because they have no side effect to suppress.
@@ -58,8 +60,9 @@ Two of these matter enough to call out for every mutating command below:
     `profiles folders`). Nothing was fetched, so there is nothing to report.
   - **`data` is an identity-only payload with a `false` past-tense flag**
     when the payload is built entirely from flags you already passed — every
-    `delete` (`"deleted": false`) plus `profiles options/filters/services
-    update` (`"updated": false`). These stay populated so a dry run still
+    `delete` (`"deleted": false`), `access learn` (`"learned": false`), and
+    `profiles options/filters/services update` (`"updated": false`). These
+    stay populated so a dry run still
     tells you _which_ object would have been affected, but only the
     identifying fields (e.g. `profile_id`, `service`) are present — the
     requested change itself (`--do`, `--enabled`, `--value`, etc.) is never
@@ -68,9 +71,12 @@ Two of these matter enough to call out for every mutating command below:
 
   In both cases `meta.dry_run` is the authoritative signal; do not infer a
   dry run from the shape of `data`.
-- **`--yes`** is required by the four commands gated on explicit
-  confirmation: `devices delete`, `profiles delete`, `profiles rules
-  delete`, and `profiles folders delete`. In machine mode (`--format=json`,
+- **`--yes`** is required by the five commands gated on explicit
+  confirmation: `access delete`, `devices delete`, `profiles delete`,
+  `profiles rules delete`, and `profiles folders delete` — and, while
+  `--org-id` is in effect, by **every** mutating command (see
+  [Organization impersonation](#organization-impersonation) below). In
+  machine mode (`--format=json`,
   or non-TTY output with no `--format` given) omitting `--yes` fails
   immediately with a `confirmation_required` error (exit code 2) and an
   `actionable_fix` of "pass --yes to confirm this operation". In human mode
@@ -78,6 +84,34 @@ Two of these matter enough to call out for every mutating command below:
 
 Credential precedence is `--api-token` > `CONTROLD_API_TOKEN` env var >
 `--config`'s `api_token` field.
+
+### Organization impersonation
+
+`--org-id` lets a parent-organization token act as an administrator of one of
+its sub-organizations. It resolves with the same precedence as the token:
+`--org-id` > `CONTROLD_ORG_ID` env var > `--config`'s `org_id` field. When a
+value is in effect, every request carries it in the `X-Force-Org-Id` header;
+when none is, no such header is sent and every command behaves exactly as it
+did before the flag existed.
+
+Two consequences are worth knowing before you use it:
+
+- **Every success envelope reports the tenant it acted on.** `meta.org_id` is
+  present on every command's output unconditionally, with `""` meaning the
+  token's own account. It is never omitted, so a machine consumer can assert
+  which tenant was affected without inspecting its own configuration, and
+  cannot confuse "did not impersonate" with "this build predates the echo".
+  The echo survives `--dry-run`.
+- **Every mutation requires `--yes`, not just deletes.** Under `--org-id` a
+  `create` or an `update` is gated exactly the way a `delete` always was:
+  machine mode without `--yes` fails with `confirmation_required` (exit code
+  2), and human mode prompts. The blast radius of a cross-tenant mutation
+  lands on an account you do not own, which is the reason for the stronger
+  rule. Without `--org-id` nothing changes.
+
+An organization the token is not entitled to act for surfaces the upstream
+authorization failure unchanged — `controld_permission_denied` with its
+existing exit code, not a rewritten error.
 
 ## Devices
 
@@ -603,6 +637,209 @@ code 2).
 **Dry-run:** supported (combine with `--yes`). `--dry-run` suppresses the
 actual deletion.
 
+## Account
+
+Commands under `controldctl users` and `controldctl ip` read the account
+behind the configured token and the network vantage point ControlD sees it
+from. Both are read-only: neither accepts `--dry-run` or `--yes`, because
+neither has a side effect to suppress or confirm.
+
+### `controldctl users show`
+
+Show the account record for the authenticated token: its identifier, email,
+status, signup date, last-active time, two-factor and proxy-access flags,
+resolver identifier, and analytics storage endpoint.
+
+No command-specific flags beyond the global flags above.
+
+#### Example
+
+```bash
+controldctl users show --format=json
+```
+
+The vendor API tags the account primary key `PK`; the envelope normalizes it
+to `pk`, and every other key to lowercase snake_case. Only `last_active` is
+tagged non-deterministic — the account identifier is assigned once and does
+not change between calls, so it stays assertable in a fixture.
+
+### `controldctl ip show`
+
+Show the caller's egress IP as ControlD sees it, with the type, owning
+organization, country, handler, and serving point of presence attached to it.
+
+No command-specific flags beyond the global flags above.
+
+#### Example
+
+```bash
+controldctl ip show --format=json
+```
+
+This output is point-in-time environmental state: it describes the caller's
+current network vantage point, not account configuration, and changes
+whenever that vantage point does. That volatility is documented here rather
+than tagged in the schema, so the payload still compares byte-stably against
+a fixture in tests.
+
+## Access
+
+Commands under `controldctl access` manage the known-IP allowlist that
+authorizes a device's ControlD resolver. Every command takes a device
+identifier; the group is top-level rather than nested under `devices` so the
+mapping from ControlD's `/access` endpoint to the command stays mechanical.
+
+### `controldctl access list`
+
+List the IPs ControlD has learned for a device, with the last-seen time and
+the geographic and autonomous-system metadata attached to each.
+
+| Flag | Type | Default | Required | Description |
+|------|------|---------|----------|--------------|
+| `--device-id` | string | | Yes | device PK whose known IPs to list |
+
+#### Example
+
+```bash
+controldctl access list --device-id dev_abc123 --format=json
+```
+
+Returns an empty `ips` list rather than `null` when the device has no known
+IPs, so a consumer can range over the result unconditionally. `last_seen` is
+tagged non-deterministic.
+
+### `controldctl access learn`
+
+Add one or more IP addresses to a device's known-IP list, authorizing that
+device's resolver from those addresses.
+
+| Flag | Type | Default | Required | Description |
+|------|------|---------|----------|--------------|
+| `--device-id` | string | | Yes | device PK to teach the addresses to |
+| `--ips` | stringSlice | | Yes | comma-separated IP addresses to learn |
+
+#### Example
+
+```bash
+controldctl access learn \
+  --device-id dev_abc123 \
+  --ips 198.51.100.7,2001:db8::1 \
+  --format=json
+```
+
+Every `--ips` value is parsed before any request is made, so a batch
+containing one malformed address fails with a validation error naming the
+offending value and applies none of the batch.
+
+**Dry-run:** supported. `--dry-run` returns `data.learned: false` without
+submitting anything.
+
+### `controldctl access delete`
+
+Remove one or more learned IP addresses from a device.
+
+| Flag | Type | Default | Required | Description |
+|------|------|---------|----------|--------------|
+| `--device-id` | string | | Yes | device PK to remove the addresses from |
+| `--ips` | stringSlice | | Yes | comma-separated IP addresses to remove |
+
+#### Example
+
+```bash
+controldctl access delete \
+  --device-id dev_abc123 \
+  --ips 198.51.100.7 \
+  --yes --format=json
+```
+
+**Confirmation required:** removing the address a network resolves from cuts
+off DNS for every client behind it, so this command is gated by `ax.Confirm`
+like any other destructive verb. Pass `--yes` in machine mode, or confirm at
+the `[y/N]` prompt in human mode; otherwise it fails with
+`confirmation_required` (exit code 2).
+
+**Dry-run:** supported (combine with `--yes`, since confirmation is checked
+first). `--dry-run` returns `data.deleted: false` without deleting anything.
+
+## Network
+
+Commands under `controldctl network` read ControlD's own infrastructure
+health. Read-only: no `--dry-run` or `--yes`.
+
+### `controldctl network list`
+
+List ControlD's points of presence with the IATA code, city, country,
+geographic location, and API, DNS and proxy health of each.
+
+No command-specific flags beyond the global flags above.
+
+#### Example
+
+```bash
+controldctl network list --format=json
+```
+
+Point-of-presence health changes continuously: this reports the state at call
+time, not a stable inventory. It describes ControlD's own infrastructure, not
+this account's configuration, and is not per-account query statistics.
+Returns an empty `network` list rather than `null` when the API returns none.
+
+## Billing
+
+Commands under `controldctl billing` read the account's payment history,
+subscriptions, and active products. **The output contains financial account
+information**; because every command is also an MCP tool, scope the token you
+hand an autonomous agent accordingly. Read-only: no `--dry-run` or `--yes`.
+
+### `controldctl billing payments`
+
+List the account's payment history: amount, currency, method, refund and
+transaction status, and the product each payment was for. The payer
+fingerprint and per-currency price tables are not emitted.
+
+No command-specific flags beyond the global flags above.
+
+#### Example
+
+```bash
+controldctl billing payments --format=json
+```
+
+`date` and `ts` are tagged non-deterministic; amounts are not, because a
+recorded payment amount is a stable historical fact. Returns an empty
+`payments` list rather than `null` when there is no history.
+
+### `controldctl billing subscriptions`
+
+List the account's subscriptions with their state, price, start and end dates,
+and next billing time.
+
+No command-specific flags beyond the global flags above.
+
+#### Example
+
+```bash
+controldctl billing subscriptions --format=json
+```
+
+Returns an empty `subscriptions` list rather than `null` when there are none.
+
+### `controldctl billing products`
+
+List the products **active on the account**, each with its expiry, the
+subscription that provides it, and its price point. This is not a catalog of
+products the account could subscribe to.
+
+No command-specific flags beyond the global flags above.
+
+#### Example
+
+```bash
+controldctl billing products --format=json
+```
+
+Returns an empty `products` list rather than `null` when none are active.
+
 ## MCP Server
 
 ### `controldctl mcp-server`
@@ -633,7 +870,10 @@ before the rest of the arguments are parsed, so `controldctl --mcp
 --transport=http`.
 
 Global flags passed to `mcp-server` itself (`--api-token`, `--config`,
-`--dry-run`, `--yes`, `--idempotency-key`) become the defaults applied to
-every tool call the server executes on behalf of an MCP client — for
-example, starting the server with `--dry-run` makes every mutating tool call
-through it a dry run.
+`--dry-run`, `--org-id`, `--yes`, `--idempotency-key`) become the defaults
+applied to every tool call the server executes on behalf of an MCP client —
+for example, starting the server with `--dry-run` makes every mutating tool
+call through it a dry run, and starting it with `--org-id` makes every tool
+call act on that sub-organization. Because every command is also an MCP
+tool, `meta.org_id` on each response is what tells the agent which tenant it
+just acted on.

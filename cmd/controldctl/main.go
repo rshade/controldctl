@@ -48,10 +48,10 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 	factory := func(cmd *cobra.Command) (*controld.API, error) {
 		apiToken, _ := cmd.Flags().GetString("api-token")
 		configPath, _ := cmd.Flags().GetString("config")
-		return controld.NewClient(cmd.Context(), apiToken, configPath, "", os.Getenv)
+		return controld.NewClient(cmd.Context(), apiToken, orgIDFromContext(cmd.Context()), configPath, "", os.Getenv)
 	}
 
-	root := newRootCommand(factory)
+	root := newRootCommand(factory, withGetenv(os.Getenv))
 	root.AddCommand(mcp.NewCommand(root, mcp.WithVersion(resolved)))
 	root.SetArgs(args)
 

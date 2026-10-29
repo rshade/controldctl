@@ -77,7 +77,7 @@ func newProfilesFoldersListCommand(factory clientFactory) *cobra.Command {
 				return controld.MapError(cmd.Context(), err)
 			}
 			payload := foldersListPayload{Groups: toGroupPayloads(groups)}
-			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
+			return ax.WriteJSON(cmd.OutOrStdout(), newEnvelope(cmd.Context(), payload))
 		},
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK (required)")
@@ -98,6 +98,17 @@ func newProfilesFoldersCreateCommand(factory clientFactory) *cobra.Command {
 				return validationError(cmd, "--profile-id and --name are required",
 					"pass --profile-id with the profile PK and --name with the folder name")
 			}
+			if requireConfirmation(cmd, false) {
+				approved, confirmErr := confirmed(cmd, "create rule folder "+name)
+				if confirmErr != nil {
+					return confirmErr
+				}
+				if !approved {
+					return ax.WriteJSON(cmd.OutOrStdout(),
+						newEnvelope(cmd.Context(), (*foldersListPayload)(nil)))
+				}
+			}
+
 			client, err := factory(cmd)
 			if err != nil {
 				return err
@@ -128,7 +139,7 @@ func newProfilesFoldersCreateCommand(factory clientFactory) *cobra.Command {
 			if ran {
 				payload = &foldersListPayload{Groups: toGroupPayloads(result)}
 			}
-			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
+			return ax.WriteJSON(cmd.OutOrStdout(), newEnvelope(cmd.Context(), payload))
 		},
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK (required)")
@@ -153,6 +164,17 @@ func newProfilesFoldersUpdateCommand(factory clientFactory) *cobra.Command {
 				return validationError(cmd, "--profile-id and --folder-id are required",
 					"pass --profile-id with the profile PK and --folder-id with the folder ID")
 			}
+			if requireConfirmation(cmd, false) {
+				approved, confirmErr := confirmed(cmd, "update rule folder "+folderID)
+				if confirmErr != nil {
+					return confirmErr
+				}
+				if !approved {
+					return ax.WriteJSON(cmd.OutOrStdout(),
+						newEnvelope(cmd.Context(), (*foldersListPayload)(nil)))
+				}
+			}
+
 			client, err := factory(cmd)
 			if err != nil {
 				return err
@@ -187,7 +209,7 @@ func newProfilesFoldersUpdateCommand(factory clientFactory) *cobra.Command {
 			if ran {
 				payload = &foldersListPayload{Groups: toGroupPayloads(result)}
 			}
-			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
+			return ax.WriteJSON(cmd.OutOrStdout(), newEnvelope(cmd.Context(), payload))
 		},
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK (required)")
@@ -211,19 +233,14 @@ func newProfilesFoldersDeleteCommand(factory clientFactory) *cobra.Command {
 					"pass --profile-id with the profile PK and --folder-id with the folder ID")
 			}
 
-			subject := "delete rule folder " + folderID
-			outcome, err := ax.Confirm(cmd.Context(), subject)
-			if err != nil {
-				return err
-			}
-			if outcome == ax.ConfirmationPromptRequired {
-				approved, promptErr := promptForConfirmation(cmd, subject)
-				if promptErr != nil {
-					return promptErr
+			if requireConfirmation(cmd, true) {
+				approved, confirmErr := confirmed(cmd, "delete rule folder "+folderID)
+				if confirmErr != nil {
+					return confirmErr
 				}
 				if !approved {
 					return ax.WriteJSON(cmd.OutOrStdout(),
-						ax.NewEnvelope(cmd.Context(), folderDeletePayload{ProfileID: profileID, FolderID: folderID, Deleted: false}))
+						newEnvelope(cmd.Context(), folderDeletePayload{ProfileID: profileID, FolderID: folderID, Deleted: false}))
 				}
 			}
 
@@ -243,7 +260,7 @@ func newProfilesFoldersDeleteCommand(factory clientFactory) *cobra.Command {
 				return controld.MapError(cmd.Context(), err)
 			}
 			return ax.WriteJSON(cmd.OutOrStdout(),
-				ax.NewEnvelope(cmd.Context(), folderDeletePayload{ProfileID: profileID, FolderID: folderID, Deleted: ran}))
+				newEnvelope(cmd.Context(), folderDeletePayload{ProfileID: profileID, FolderID: folderID, Deleted: ran}))
 		},
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK (required)")

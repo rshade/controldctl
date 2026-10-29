@@ -149,6 +149,41 @@ func TestValidationErrorsIncludeActionableFix(t *testing.T) {
 			args: []string{"profiles", "filters", "update", "--format=json"},
 			want: []string{"--profile-id", "--filter"},
 		},
+		{
+			name: "access list requires --device-id",
+			args: []string{"access", "list", "--format=json"},
+			want: []string{"--device-id"},
+		},
+		{
+			name: "access learn requires --device-id",
+			args: []string{"access", "learn", "--ips=198.51.100.7", "--format=json"},
+			want: []string{"--device-id"},
+		},
+		{
+			name: "access learn requires --ips",
+			args: []string{"access", "learn", "--device-id=dev1", "--format=json"},
+			want: []string{"--ips"},
+		},
+		{
+			name: "access learn rejects a malformed --ips value",
+			args: []string{"access", "learn", "--device-id=dev1", "--ips=not-an-ip", "--format=json"},
+			want: []string{"--ips"},
+		},
+		{
+			name: "access delete requires --device-id",
+			args: []string{"access", "delete", "--ips=198.51.100.7", "--format=json"},
+			want: []string{"--device-id"},
+		},
+		{
+			name: "access delete requires --ips",
+			args: []string{"access", "delete", "--device-id=dev1", "--format=json"},
+			want: []string{"--ips"},
+		},
+		{
+			name: "access delete rejects a malformed --ips value",
+			args: []string{"access", "delete", "--device-id=dev1", "--ips=not-an-ip", "--format=json"},
+			want: []string{"--ips"},
+		},
 	}
 
 	for _, tc := range cases {

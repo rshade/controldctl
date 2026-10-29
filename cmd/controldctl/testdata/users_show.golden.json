@@ -1,0 +1,1 @@
+{"data":{"pk":"acct1","email":"ops@example.com","status":true,"date":"2023-01-15","last_active":1700000000,"twofa":false,"proxy_access":true,"stats_endpoint":"https://stats.example","resolver_uid":"uid1"},"meta":{"trace_id":"MASKED","span_id":"MASKED","idempotency_key":"MASKED","org_id":""}}

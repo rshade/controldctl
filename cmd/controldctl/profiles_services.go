@@ -74,7 +74,7 @@ func newProfilesServicesListCommand(factory clientFactory) *cobra.Command {
 				return controld.MapError(cmd.Context(), err)
 			}
 			payload := servicesListPayload{Services: toServicePayloads(services)}
-			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
+			return ax.WriteJSON(cmd.OutOrStdout(), newEnvelope(cmd.Context(), payload))
 		},
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK (required)")
@@ -101,6 +101,17 @@ func newProfilesServicesUpdateCommand(factory clientFactory) *cobra.Command {
 				return validationError(cmd, "--profile-id and --service are required",
 					"pass --profile-id with the profile PK and --service with the service PK")
 			}
+			if requireConfirmation(cmd, false) {
+				approved, confirmErr := confirmed(cmd, "update service "+service+" on profile "+profileID)
+				if confirmErr != nil {
+					return confirmErr
+				}
+				if !approved {
+					return ax.WriteJSON(cmd.OutOrStdout(),
+						newEnvelope(cmd.Context(), serviceUpdatePayload{ProfileID: profileID, Service: service, Updated: false}))
+				}
+			}
+
 			client, err := factory(cmd)
 			if err != nil {
 				return err
@@ -120,7 +131,7 @@ func newProfilesServicesUpdateCommand(factory clientFactory) *cobra.Command {
 				return controld.MapError(cmd.Context(), err)
 			}
 			return ax.WriteJSON(cmd.OutOrStdout(),
-				ax.NewEnvelope(cmd.Context(), serviceUpdatePayload{ProfileID: profileID, Service: service, Updated: ran}))
+				newEnvelope(cmd.Context(), serviceUpdatePayload{ProfileID: profileID, Service: service, Updated: ran}))
 		},
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK (required)")

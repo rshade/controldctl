@@ -72,7 +72,7 @@ func newDevicesListCommand(factory clientFactory) *cobra.Command {
 			for _, d := range devices {
 				payload.Devices = append(payload.Devices, toDevicePayload(d))
 			}
-			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
+			return ax.WriteJSON(cmd.OutOrStdout(), newEnvelope(cmd.Context(), payload))
 		},
 	}
 	ax.WithNonDeterministicFields[devicesListPayload](cmd)
@@ -93,6 +93,17 @@ func newDevicesCreateCommand(factory clientFactory) *cobra.Command {
 				return validationError(cmd, "--name and --profile-id are required",
 					"pass --name with the device name and --profile-id with the profile PK")
 			}
+			if requireConfirmation(cmd, false) {
+				approved, confirmErr := confirmed(cmd, "create device "+name)
+				if confirmErr != nil {
+					return confirmErr
+				}
+				if !approved {
+					return ax.WriteJSON(cmd.OutOrStdout(),
+						newEnvelope(cmd.Context(), (*devicePayload)(nil)))
+				}
+			}
+
 			client, err := factory(cmd)
 			if err != nil {
 				return err
@@ -142,7 +153,7 @@ func newDevicesCreateCommand(factory clientFactory) *cobra.Command {
 				device := toDevicePayload(result)
 				payload = &device
 			}
-			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
+			return ax.WriteJSON(cmd.OutOrStdout(), newEnvelope(cmd.Context(), payload))
 		},
 	}
 	cmd.Flags().StringVar(&name, "name", "", "device name (required)")
@@ -172,6 +183,17 @@ func newDevicesUpdateCommand(factory clientFactory) *cobra.Command {
 				return validationError(cmd, "--device-id is required",
 					"pass --device-id with the device PK")
 			}
+			if requireConfirmation(cmd, false) {
+				approved, confirmErr := confirmed(cmd, "update device "+deviceID)
+				if confirmErr != nil {
+					return confirmErr
+				}
+				if !approved {
+					return ax.WriteJSON(cmd.OutOrStdout(),
+						newEnvelope(cmd.Context(), (*devicePayload)(nil)))
+				}
+			}
+
 			client, err := factory(cmd)
 			if err != nil {
 				return err
@@ -217,7 +239,7 @@ func newDevicesUpdateCommand(factory clientFactory) *cobra.Command {
 				device := toDevicePayload(result)
 				payload = &device
 			}
-			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
+			return ax.WriteJSON(cmd.OutOrStdout(), newEnvelope(cmd.Context(), payload))
 		},
 	}
 	cmd.Flags().StringVar(&deviceID, "device-id", "", "device PK to update (required)")
@@ -244,19 +266,14 @@ func newDevicesDeleteCommand(factory clientFactory) *cobra.Command {
 					"pass --device-id with the device PK")
 			}
 
-			subject := fmt.Sprintf("delete device %s", deviceID)
-			outcome, err := ax.Confirm(cmd.Context(), subject)
-			if err != nil {
-				return err
-			}
-			if outcome == ax.ConfirmationPromptRequired {
-				approved, promptErr := promptForConfirmation(cmd, subject)
-				if promptErr != nil {
-					return promptErr
+			if requireConfirmation(cmd, true) {
+				approved, confirmErr := confirmed(cmd, fmt.Sprintf("delete device %s", deviceID))
+				if confirmErr != nil {
+					return confirmErr
 				}
 				if !approved {
 					return ax.WriteJSON(cmd.OutOrStdout(),
-						ax.NewEnvelope(cmd.Context(), deviceDeletePayload{DeviceID: deviceID, Deleted: false}))
+						newEnvelope(cmd.Context(), deviceDeletePayload{DeviceID: deviceID, Deleted: false}))
 				}
 			}
 
@@ -273,7 +290,7 @@ func newDevicesDeleteCommand(factory clientFactory) *cobra.Command {
 				return controld.MapError(cmd.Context(), err)
 			}
 			return ax.WriteJSON(cmd.OutOrStdout(),
-				ax.NewEnvelope(cmd.Context(), deviceDeletePayload{DeviceID: deviceID, Deleted: ran}))
+				newEnvelope(cmd.Context(), deviceDeletePayload{DeviceID: deviceID, Deleted: ran}))
 		},
 	}
 	cmd.Flags().StringVar(&deviceID, "device-id", "", "device PK to delete (required)")
@@ -294,7 +311,7 @@ func newDevicesTypesCommand(factory clientFactory) *cobra.Command {
 			if err != nil {
 				return controld.MapError(cmd.Context(), err)
 			}
-			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), types))
+			return ax.WriteJSON(cmd.OutOrStdout(), newEnvelope(cmd.Context(), types))
 		},
 	}
 	ax.WithNonDeterministicFields[controld.DeviceTypes](cmd)

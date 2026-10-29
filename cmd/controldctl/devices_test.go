@@ -18,7 +18,8 @@ import (
 func testFactory(t *testing.T, server *httptest.Server) clientFactory {
 	t.Helper()
 	return func(cmd *cobra.Command) (*controld.API, error) {
-		return controld.NewClient(cmd.Context(), "test-token", "", server.URL, func(string) string { return "" })
+		return controld.NewClient(cmd.Context(), "test-token", orgIDFromContext(cmd.Context()), "", server.URL,
+			func(string) string { return "" })
 	}
 }
 

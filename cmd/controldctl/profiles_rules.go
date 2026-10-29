@@ -82,7 +82,7 @@ func newProfilesRulesListCommand(factory clientFactory) *cobra.Command {
 				return controld.MapError(cmd.Context(), err)
 			}
 			payload := rulesListPayload{Rules: toRulePayloads(rules)}
-			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
+			return ax.WriteJSON(cmd.OutOrStdout(), newEnvelope(cmd.Context(), payload))
 		},
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK (required)")
@@ -108,6 +108,17 @@ func newProfilesRulesCreateCommand(factory clientFactory) *cobra.Command {
 				return validationError(cmd, "--via is required when --do=3 (redirect)",
 					"pass --via with the IPv4 redirect target")
 			}
+			if requireConfirmation(cmd, false) {
+				approved, confirmErr := confirmed(cmd, "create custom rules for "+hostnames)
+				if confirmErr != nil {
+					return confirmErr
+				}
+				if !approved {
+					return ax.WriteJSON(cmd.OutOrStdout(),
+						newEnvelope(cmd.Context(), (*customRulesPayload)(nil)))
+				}
+			}
+
 			client, err := factory(cmd)
 			if err != nil {
 				return err
@@ -142,7 +153,7 @@ func newProfilesRulesCreateCommand(factory clientFactory) *cobra.Command {
 			if ran {
 				payload = &customRulesPayload{Rules: result}
 			}
-			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
+			return ax.WriteJSON(cmd.OutOrStdout(), newEnvelope(cmd.Context(), payload))
 		},
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK (required)")
@@ -178,6 +189,17 @@ func newProfilesRulesUpdateCommand(factory clientFactory) *cobra.Command {
 				return validationError(cmd, "--via is required when --do=3 (redirect)",
 					"pass --via with the IPv4 redirect target")
 			}
+			if requireConfirmation(cmd, false) {
+				approved, confirmErr := confirmed(cmd, "update custom rules for "+hostnames)
+				if confirmErr != nil {
+					return confirmErr
+				}
+				if !approved {
+					return ax.WriteJSON(cmd.OutOrStdout(),
+						newEnvelope(cmd.Context(), (*customRulesPayload)(nil)))
+				}
+			}
+
 			client, err := factory(cmd)
 			if err != nil {
 				return err
@@ -212,7 +234,7 @@ func newProfilesRulesUpdateCommand(factory clientFactory) *cobra.Command {
 			if ran {
 				payload = &customRulesPayload{Rules: result}
 			}
-			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
+			return ax.WriteJSON(cmd.OutOrStdout(), newEnvelope(cmd.Context(), payload))
 		},
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK (required)")
@@ -238,19 +260,14 @@ func newProfilesRulesDeleteCommand(factory clientFactory) *cobra.Command {
 					"pass --profile-id with the profile PK and --hostname with the rule's hostname")
 			}
 
-			subject := "delete custom rule for " + hostname
-			outcome, err := ax.Confirm(cmd.Context(), subject)
-			if err != nil {
-				return err
-			}
-			if outcome == ax.ConfirmationPromptRequired {
-				approved, promptErr := promptForConfirmation(cmd, subject)
-				if promptErr != nil {
-					return promptErr
+			if requireConfirmation(cmd, true) {
+				approved, confirmErr := confirmed(cmd, "delete custom rule for "+hostname)
+				if confirmErr != nil {
+					return confirmErr
 				}
 				if !approved {
 					return ax.WriteJSON(cmd.OutOrStdout(),
-						ax.NewEnvelope(cmd.Context(), ruleDeletePayload{ProfileID: profileID, Hostname: hostname, Deleted: false}))
+						newEnvelope(cmd.Context(), ruleDeletePayload{ProfileID: profileID, Hostname: hostname, Deleted: false}))
 				}
 			}
 
@@ -270,7 +287,7 @@ func newProfilesRulesDeleteCommand(factory clientFactory) *cobra.Command {
 				return controld.MapError(cmd.Context(), err)
 			}
 			return ax.WriteJSON(cmd.OutOrStdout(),
-				ax.NewEnvelope(cmd.Context(), ruleDeletePayload{ProfileID: profileID, Hostname: hostname, Deleted: ran}))
+				newEnvelope(cmd.Context(), ruleDeletePayload{ProfileID: profileID, Hostname: hostname, Deleted: ran}))
 		},
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK (required)")

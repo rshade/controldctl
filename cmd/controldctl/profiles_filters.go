@@ -122,7 +122,7 @@ func newProfilesFiltersListCommand(factory clientFactory) *cobra.Command {
 				return controld.MapError(cmd.Context(), err)
 			}
 			payload := filtersListPayload{Filters: toFilterPayloads(filters)}
-			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
+			return ax.WriteJSON(cmd.OutOrStdout(), newEnvelope(cmd.Context(), payload))
 		},
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK (required)")
@@ -149,6 +149,17 @@ func newProfilesFiltersUpdateCommand(factory clientFactory) *cobra.Command {
 				return validationError(cmd, "--profile-id and --filter are required",
 					"pass --profile-id with the profile PK and --filter with the filter PK")
 			}
+			if requireConfirmation(cmd, false) {
+				approved, confirmErr := confirmed(cmd, "update filter "+filter+" on profile "+profileID)
+				if confirmErr != nil {
+					return confirmErr
+				}
+				if !approved {
+					return ax.WriteJSON(cmd.OutOrStdout(),
+						newEnvelope(cmd.Context(), filterUpdatePayload{ProfileID: profileID, Filter: filter, Updated: false}))
+				}
+			}
+
 			client, err := factory(cmd)
 			if err != nil {
 				return err
@@ -167,7 +178,7 @@ func newProfilesFiltersUpdateCommand(factory clientFactory) *cobra.Command {
 				return controld.MapError(cmd.Context(), err)
 			}
 			return ax.WriteJSON(cmd.OutOrStdout(),
-				ax.NewEnvelope(cmd.Context(), filterUpdatePayload{ProfileID: profileID, Filter: filter, Updated: ran}))
+				newEnvelope(cmd.Context(), filterUpdatePayload{ProfileID: profileID, Filter: filter, Updated: ran}))
 		},
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK (required)")

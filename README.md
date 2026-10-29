@@ -10,11 +10,37 @@ API, built on [ax-go](https://github.com/rshade/ax-go) and
 go build -o bin/controldctl ./cmd/controldctl
 ```
 
+Or download a release binary from the
+[Releases](https://github.com/rshade/controldctl/releases) page.
+
+**`go install` will not work right now.** `go.mod` carries a `replace`
+directive pointing `github.com/baptistecdr/controld-go` at a commit of
+[`rshade/controld-go`](https://github.com/rshade/controld-go), and Go refuses
+to `go install <pkg>@latest` any module whose `go.mod` contains a `replace`.
+Build from a clone or use a release binary until then; both are unaffected.
+
+The fork exists only to carry changes that are on their way upstream — it
+preserves upstream's module path, so the directive is a single line and
+nothing in the source refers to the fork. **The exit condition is upstream
+merging the change**: once `baptistecdr/controld-go` ships a release
+containing the typed-error fix, the `replace` line and this note are deleted
+together and `go install` works again.
+
 ## Authenticate
 
 Set `CONTROLD_API_TOKEN`, or pass `--api-token`, or point `--config` at a
 Hujson file with an `api_token` field. Precedence is `--api-token` >
 `CONTROLD_API_TOKEN` > `--config`.
+
+To act as one of your organization's sub-organizations, pass `--org-id`, set
+`CONTROLD_ORG_ID`, or add an `org_id` field to the same config file — the
+same precedence applies: `--org-id` > `CONTROLD_ORG_ID` > `--config`. The
+value is sent as ControlD's `X-Force-Org-Id` header, and every success
+envelope reports the tenant it acted on in `meta.org_id` (empty means the
+token's own account, and the key is never omitted). While an organization is
+in effect, **every** mutation requires `--yes`, not just deletes — a
+cross-tenant change lands on an account you do not own. Without `--org-id`,
+nothing about the CLI's behavior changes.
 
 ## Usage
 
@@ -24,6 +50,12 @@ controldctl profiles list --format=json
 controldctl profiles filters list --profile-id=<id>
 controldctl profiles rules create --profile-id=<id> \
   --hostnames=ads.example.com --do=0
+controldctl users show                 # the account behind the token
+controldctl ip show                    # your egress IP, as ControlD sees it
+controldctl network list               # ControlD's own PoP health
+controldctl access list --device-id=<id>
+controldctl billing payments           # payment history (financial data)
+controldctl devices list --org-id=<sub-org id>
 controldctl mcp-server                 # run as an MCP server over stdio
 controldctl --mcp                      # same thing, shorter
 ```
@@ -50,6 +82,11 @@ retries.
 
 ## Command tree
 
+- `access` - the known-IP allowlist authorizing a device's resolver
+  - `list`, `learn`, `delete`
+- `billing` - the account's payments, subscriptions, and active products
+  (financial data)
+  - `payments`, `subscriptions`, `products`
 - `devices` - manage ControlD devices (endpoints)
   - `list`, `create`, `update`, `delete`, `types`
 - `profiles` - manage ControlD profiles
@@ -59,6 +96,12 @@ retries.
   - `services` - service (app/site) rules: `list`, `update`
   - `rules` - custom domain rules: `list`, `create`, `update`, `delete`
   - `folders` - custom-rule folders: `list`, `create`, `update`, `delete`
+- `ip` - the caller's egress IP as ControlD observes it
+  - `show`
+- `network` - ControlD's own point-of-presence and resolver health
+  - `list`
+- `users` - the account record behind the configured token
+  - `show`
 - `mcp-server` - run as an MCP server (stdio or HTTP transport)
 - `--mcp` - shorthand for `mcp-server`
 - `__schema` - emit the machine-discoverability schema (`ax` or `mcp` format)
@@ -66,8 +109,11 @@ retries.
 Run `controldctl [command] --help` or `controldctl __schema` for the full,
 authoritative set of flags per command.
 
-Out of scope for this CLI: Users/account info, Billing, Network Stats,
-Access/IP logs, org impersonation, and mass provisioning.
+Out of scope for this CLI: local DNS resolution or proxying (that is
+ControlD's own [`ctrld`](https://github.com/Control-D-Inc/ctrld)), any local
+persistent state, and analytics-data commands — ControlD's `/stats` and
+`/queries` paths appear only in community documentation, not its official
+API reference.
 
 ## MCP server
 

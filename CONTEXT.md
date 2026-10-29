@@ -5,7 +5,9 @@
 `controldctl` is a Go CLI — and, through the same command tree, a Model
 Context Protocol (MCP) server — for managing [ControlD](https://controld.com)
 DNS filtering resources: devices, profiles, filters, services, custom rules,
-and rule folders. It's built on
+and rule folders, plus the account and organization surface — account info,
+egress IP, PoP health, and the device known-IP allowlist — with
+cross-tenant impersonation via `--org-id`. It's built on
 [`ax-go`](https://github.com/rshade/ax-go) (a shared "Agentic Experience"
 foundation that gives any Cobra CLI deterministic JSON envelopes, structured
 errors, dry-run/confirmation safety primitives, and a free MCP server derived
@@ -20,9 +22,15 @@ identical behavior and identical safety guarantees either way.
 - Does not implement DNS resolution or act as a DNS proxy/resolver — that's
   ControlD's own [`ctrld`](https://github.com/Control-D-Inc/ctrld) client's
   job, a different tool entirely.
-- Does not manage Users/account info, Billing, Network Stats, Access/IP logs,
-  org impersonation, or mass provisioning — explicitly out of scope for the
-  initial "Core DNS control" build (see #6 for the future scoping pass).
+- The account and organization surface — account info, egress IP, PoP health,
+  Access/IP logs, billing, organizations, org impersonation, and mass
+  provisioning — is **in scope**. It was deferred from the initial "Core DNS
+  control" build pending a scoping pass; that pass is #6 and the decision is
+  made, so this is no longer a boundary. What that surface may do is bounded
+  by the rules below, not by a blanket exclusion: it is read-mostly, it holds
+  no state, and its two sensitive edges carry explicit gates — provisioning
+  codes are redacted unless a reveal flag is passed, and every mutation made
+  under `--org-id` requires confirmation, not just deletes.
 - Does not persist any state of its own — no local database, no cache. Every
   command is a stateless call through to the ControlD API.
 - Does not implement its own HTTP client for the ControlD API. All API access
@@ -53,7 +61,9 @@ command reflects the API's response at call time.
 ## Verification
 
 A proposed feature crosses these boundaries if it would: (a) implement local
-DNS resolution or proxying, (b) touch Users/Billing/Network Stats/Access-logs/
-org-impersonation/mass-provisioning without a fresh scoping decision, (c) add
-local persistent state, or (d) call the vendor library or a raw HTTP client
-from a command file instead of going through `internal/controld`.
+DNS resolution or proxying, (b) add analytics-data commands (`/stats`,
+`/queries`) — the deferral that survived #6's scoping pass, because those
+paths appear only in community documentation and not in ControlD's official
+reference, (c) add local persistent state, or (d) call the vendor library or
+a raw HTTP client from a command file instead of going through
+`internal/controld`.

@@ -20,7 +20,8 @@ roadmap tracks hardening and the deferred scope from that build.
 
 ## Future Vision (Long-Term)
 
-- [ ] #6 Scope and design the Account/Org resource surface (Users, Billing, Network Stats, Access/IP logs, org impersonation) [L]
+- [ ] #32 Add `orgs` command group (blocked on an organization-enabled token) [M]
+- [ ] #33 Add `provision` command group with redacted codes (blocked on an organization-enabled token) [M]
 - [ ] #7 Add deferred optional flags per resource (DDNS, legacy-IPv4, lock_status, via/group/order) [M]
 - [ ] #9 Improve validation-error actionable_fix coverage (1/20 currently) [S]
 - [ ] #10 README polish: mention --idempotency-key, hint at rules create's --folder-id=0 default [S]
@@ -36,6 +37,12 @@ roadmap tracks hardening and the deferred scope from that build.
   The full build record is kept locally and gitignored (see Boundary
   Safeguards), not part of this repo's tracked history. No tracking
   issue — predates issue-based tracking on this repo. Closed 2026-08-31.
+- [x] Account/org surface (#6): `users show`, `ip show`, `network list`,
+  `access list|learn|delete`, `billing payments|subscriptions|products`, and
+  organization impersonation (`--org-id`, `meta.org_id` on every envelope,
+  every mutation gated by `--yes` while impersonating). `orgs` and `provision`
+  were probed, returned 404 from an account with no organization, and moved to
+  #32 and #33 pending an organization-enabled token.
 - [x] Post-v1 infrastructure: renamed the module to `controldctl`, moved
   to the standard `cmd/controldctl/` layout, pinned `ax-go` to the
   published v0.5.0 release (dropped a local-path `replace`, verified
@@ -76,8 +83,12 @@ scoping decision:
 
 - No local DNS resolution/proxying (that's ControlD's own `ctrld`, a
   different tool).
-- No Users/Billing/Network Stats/Access-IP-logs/org-impersonation/
-  mass-provisioning without a scoping pass (tracked as #6).
+- No analytics-data commands (`/stats`, `/queries`). This is the one part of
+  the account/org surface that #6's scoping pass deliberately left out: both
+  paths appear only in community endpoint lists, ControlD's official
+  reference has no such endpoints, and its own forum carries an open request
+  for the API — so building on them risks shipping against a private
+  endpoint. The rest of that surface is now in scope; see #6.
 - No local persistent state — the ControlD API is the sole source of truth.
 - No direct vendor-library or raw-HTTP-client calls from command files —
   everything routes through `internal/controld`.

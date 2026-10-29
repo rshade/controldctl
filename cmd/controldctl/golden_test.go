@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"flag"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -102,18 +103,37 @@ const (
 	shapeIdentity
 )
 
+// pastTenseFlags are the identity-payload flags a mutating command reports:
+// true after a real run, false under --dry-run or a declined confirmation. A
+// new mutating verb whose payload names its own flag must be added here, or
+// its shapeIdentity golden case fails.
+//
+//nolint:gochecknoglobals // test-only vocabulary shared by the golden cases
+var pastTenseFlags = []string{"deleted", "updated", "learned"}
+
+func hasPastTenseFlag(stdout []byte, value bool) bool {
+	for _, flag := range pastTenseFlags {
+		if bytes.Contains(stdout, fmt.Appendf(nil, `"%s":%t`, flag, value)) {
+			return true
+		}
+	}
+	return false
+}
+
 // TestGoldenCommandEnvelopes pins the exact stdout envelope of every
 // success-path command against checked-in fixtures, mirroring the golden
 // convention of ax-go's examples/integration. The canned API bodies match the
 // ones in the per-command tests.
-func TestGoldenCommandEnvelopes(t *testing.T) {
-	deviceBody := `{"success": true, "body":
-		{"PK": "dev1", "ts": 1700000000, "name": "laptop", "user": "u1", "device_id": "abc123",
-		 "status": 1, "learn_ip": 0, "desc": "", "resolvers": {"uid": "u1", "doh": "https://x", "dot": "x:853"},
-		 "legacy_ipv4": {"resolver": "1.2.3.4", "status": 0},
-		 "profile": {"PK": "p1", "updated": 1700000000, "name": "Home"},
-		 "icon": "desktop-linux"}}`
+// deviceBody is the canned single-device API response shared by the golden
+// cases and the impersonation tests that assert v1 output byte-for-byte.
+const deviceBody = `{"success": true, "body":
+	{"PK": "dev1", "ts": 1700000000, "name": "laptop", "user": "u1", "device_id": "abc123",
+	 "status": 1, "learn_ip": 0, "desc": "", "resolvers": {"uid": "u1", "doh": "https://x", "dot": "x:853"},
+	 "legacy_ipv4": {"resolver": "1.2.3.4", "status": 0},
+	 "profile": {"PK": "p1", "updated": 1700000000, "name": "Home"},
+	 "icon": "desktop-linux"}}`
 
+func TestGoldenCommandEnvelopes(t *testing.T) {
 	cases := []struct {
 		name    string
 		args    []string
@@ -309,6 +329,66 @@ func TestGoldenCommandEnvelopes(t *testing.T) {
 			},
 			handler: jsonResponse(`{"success": true, "body": {"services": [{"do": 1, "status": 1}]}}`),
 		},
+		{
+			name:    "users_show",
+			shape:   shapeNone,
+			args:    []string{"users", "show", "--format=json"},
+			handler: jsonResponse(userBody),
+		},
+		{
+			name:    "ip_show",
+			shape:   shapeNone,
+			args:    []string{"ip", "show", "--format=json"},
+			handler: jsonResponse(ipBody),
+		},
+		{
+			name:    "network_list",
+			shape:   shapeNone,
+			args:    []string{"network", "list", "--format=json"},
+			handler: jsonResponse(networkBody),
+		},
+		{
+			name:    "billing_payments",
+			shape:   shapeNone,
+			args:    []string{"billing", "payments", "--format=json"},
+			handler: jsonResponse(paymentsBody),
+		},
+		{
+			name:    "billing_subscriptions",
+			shape:   shapeNone,
+			args:    []string{"billing", "subscriptions", "--format=json"},
+			handler: jsonResponse(subscriptionsBody),
+		},
+		{
+			name:    "billing_products",
+			shape:   shapeNone,
+			args:    []string{"billing", "products", "--format=json"},
+			handler: jsonResponse(productsBody),
+		},
+		{
+			name:    "access_list",
+			shape:   shapeNone,
+			args:    []string{"access", "list", "--device-id=dev1", "--format=json"},
+			handler: jsonResponse(knownIPsBody),
+		},
+		{
+			name:  "access_learn",
+			shape: shapeIdentity,
+			args: []string{
+				"access", "learn",
+				"--device-id=dev1", "--ips=198.51.100.7", "--format=json",
+			},
+			handler: jsonResponse(`{"success": true, "body": []}`),
+		},
+		{
+			name:  "access_delete",
+			shape: shapeIdentity,
+			args: []string{
+				"access", "delete",
+				"--device-id=dev1", "--ips=198.51.100.7", "--yes", "--format=json",
+			},
+			handler: jsonResponse(`{"success": true, "body": []}`),
+		},
 	}
 
 	for _, tc := range cases {
@@ -341,15 +421,11 @@ func TestGoldenCommandEnvelopes(t *testing.T) {
 					t.Fatalf("expected data:null in dry-run output: %s", stdout)
 				}
 			case shapeIdentity:
-				hasFalseFlag := bytes.Contains(stdout, []byte(`"deleted":false`)) ||
-					bytes.Contains(stdout, []byte(`"updated":false`))
-				hasTrueFlag := bytes.Contains(stdout, []byte(`"deleted":true`)) ||
-					bytes.Contains(stdout, []byte(`"updated":true`))
-				if !hasFalseFlag {
-					t.Fatalf("expected a false past-tense flag (deleted:false or updated:false) "+
-						"in dry-run output: %s", stdout)
+				if !hasPastTenseFlag(stdout, false) {
+					t.Fatalf("expected a false past-tense flag (one of %v) "+
+						"in dry-run output: %s", pastTenseFlags, stdout)
 				}
-				if hasTrueFlag {
+				if hasPastTenseFlag(stdout, true) {
 					t.Fatalf("dry-run output must not report a true past-tense flag: %s", stdout)
 				}
 			default:

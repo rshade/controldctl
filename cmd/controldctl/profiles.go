@@ -67,7 +67,7 @@ func newProfilesListCommand(factory clientFactory) *cobra.Command {
 			if err != nil {
 				return controld.MapError(cmd.Context(), err)
 			}
-			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), toProfilesListPayload(profiles)))
+			return ax.WriteJSON(cmd.OutOrStdout(), newEnvelope(cmd.Context(), toProfilesListPayload(profiles)))
 		},
 	}
 	ax.WithNonDeterministicFields[profilesListPayload](cmd)
@@ -85,6 +85,17 @@ func newProfilesCreateCommand(factory clientFactory) *cobra.Command {
 				return validationError(cmd, "--name is required",
 					"pass --name with the profile name")
 			}
+			if requireConfirmation(cmd, false) {
+				approved, confirmErr := confirmed(cmd, "create profile "+name)
+				if confirmErr != nil {
+					return confirmErr
+				}
+				if !approved {
+					return ax.WriteJSON(cmd.OutOrStdout(),
+						newEnvelope(cmd.Context(), (*profilesListPayload)(nil)))
+				}
+			}
+
 			client, err := factory(cmd)
 			if err != nil {
 				return err
@@ -109,7 +120,7 @@ func newProfilesCreateCommand(factory clientFactory) *cobra.Command {
 				profiles := toProfilesListPayload(result)
 				payload = &profiles
 			}
-			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
+			return ax.WriteJSON(cmd.OutOrStdout(), newEnvelope(cmd.Context(), payload))
 		},
 	}
 	cmd.Flags().StringVar(&name, "name", "", "profile name (required)")
@@ -131,6 +142,17 @@ func newProfilesUpdateCommand(factory clientFactory) *cobra.Command {
 				return validationError(cmd, "--profile-id is required",
 					"pass --profile-id with the profile PK")
 			}
+			if requireConfirmation(cmd, false) {
+				approved, confirmErr := confirmed(cmd, "update profile "+profileID)
+				if confirmErr != nil {
+					return confirmErr
+				}
+				if !approved {
+					return ax.WriteJSON(cmd.OutOrStdout(),
+						newEnvelope(cmd.Context(), (*profilesListPayload)(nil)))
+				}
+			}
+
 			client, err := factory(cmd)
 			if err != nil {
 				return err
@@ -168,7 +190,7 @@ func newProfilesUpdateCommand(factory clientFactory) *cobra.Command {
 				profiles := toProfilesListPayload(result)
 				payload = &profiles
 			}
-			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
+			return ax.WriteJSON(cmd.OutOrStdout(), newEnvelope(cmd.Context(), payload))
 		},
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK to update (required)")
@@ -193,19 +215,14 @@ func newProfilesDeleteCommand(factory clientFactory) *cobra.Command {
 					"pass --profile-id with the profile PK")
 			}
 
-			subject := "delete profile " + profileID
-			outcome, err := ax.Confirm(cmd.Context(), subject)
-			if err != nil {
-				return err
-			}
-			if outcome == ax.ConfirmationPromptRequired {
-				approved, promptErr := promptForConfirmation(cmd, subject)
-				if promptErr != nil {
-					return promptErr
+			if requireConfirmation(cmd, true) {
+				approved, confirmErr := confirmed(cmd, "delete profile "+profileID)
+				if confirmErr != nil {
+					return confirmErr
 				}
 				if !approved {
 					return ax.WriteJSON(cmd.OutOrStdout(),
-						ax.NewEnvelope(cmd.Context(), profileDeletePayload{ProfileID: profileID, Deleted: false}))
+						newEnvelope(cmd.Context(), profileDeletePayload{ProfileID: profileID, Deleted: false}))
 				}
 			}
 
@@ -222,7 +239,7 @@ func newProfilesDeleteCommand(factory clientFactory) *cobra.Command {
 				return controld.MapError(cmd.Context(), err)
 			}
 			return ax.WriteJSON(cmd.OutOrStdout(),
-				ax.NewEnvelope(cmd.Context(), profileDeletePayload{ProfileID: profileID, Deleted: ran}))
+				newEnvelope(cmd.Context(), profileDeletePayload{ProfileID: profileID, Deleted: ran}))
 		},
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK to delete (required)")

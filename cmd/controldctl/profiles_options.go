@@ -61,7 +61,7 @@ func newProfilesOptionsListCommand(factory clientFactory) *cobra.Command {
 			for _, o := range options {
 				payload.Options = append(payload.Options, toProfileOptionPayload(o))
 			}
-			return ax.WriteJSON(cmd.OutOrStdout(), ax.NewEnvelope(cmd.Context(), payload))
+			return ax.WriteJSON(cmd.OutOrStdout(), newEnvelope(cmd.Context(), payload))
 		},
 	}
 	ax.WithNonDeterministicFields[profileOptionsListPayload](cmd)
@@ -86,6 +86,17 @@ func newProfilesOptionsUpdateCommand(factory clientFactory) *cobra.Command {
 				return validationError(cmd, "--profile-id and --name are required",
 					"pass --profile-id with the profile PK and --name with the option name")
 			}
+			if requireConfirmation(cmd, false) {
+				approved, confirmErr := confirmed(cmd, "update option "+name+" on profile "+profileID)
+				if confirmErr != nil {
+					return confirmErr
+				}
+				if !approved {
+					return ax.WriteJSON(cmd.OutOrStdout(),
+						newEnvelope(cmd.Context(), profileOptionUpdatePayload{ProfileID: profileID, Name: name, Updated: false}))
+				}
+			}
+
 			client, err := factory(cmd)
 			if err != nil {
 				return err
@@ -108,7 +119,7 @@ func newProfilesOptionsUpdateCommand(factory clientFactory) *cobra.Command {
 				return controld.MapError(cmd.Context(), err)
 			}
 			return ax.WriteJSON(cmd.OutOrStdout(),
-				ax.NewEnvelope(cmd.Context(), profileOptionUpdatePayload{ProfileID: profileID, Name: name, Updated: ran}))
+				newEnvelope(cmd.Context(), profileOptionUpdatePayload{ProfileID: profileID, Name: name, Updated: ran}))
 		},
 	}
 	cmd.Flags().StringVar(&profileID, "profile-id", "", "profile PK (required)")
