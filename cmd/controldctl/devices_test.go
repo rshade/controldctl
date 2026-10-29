@@ -403,6 +403,41 @@ func TestDevicesCreateSendsDeferredFlags(t *testing.T) {
 		}
 	})
 
+	t.Run("explicit false statuses are sent", func(t *testing.T) {
+		var body map[string]json.RawMessage
+		var decodeErr error
+		_, stderr, code := executeCommand(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				decodeErr = err
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(deviceResponse))
+		}), []string{
+			"devices", "create",
+			"--name=laptop", "--profile-id=p1",
+			"--legacy-ipv4-status=false", "--ddns-status=false", "--ddns-ext-status=false",
+			"--format=json",
+		})
+
+		if code != ax.ExitSuccess {
+			t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr)
+		}
+		if decodeErr != nil {
+			t.Fatalf("decode request body: %v", decodeErr)
+		}
+		for _, key := range []string{"legacy_ipv4_status", "ddns_status", "ddns_ext_status"} {
+			got, ok := body[key]
+			if !ok || string(got) != "0" {
+				t.Fatalf("expected request body %s=0, got: %+v", key, body)
+			}
+		}
+		for _, key := range []string{"ddns_subdomain", "ddns_ext_host", "remap_device_id", "remap_client_id"} {
+			if _, ok := body[key]; ok {
+				t.Fatalf("expected request body to omit %q, got: %+v", key, body)
+			}
+		}
+	})
+
 	t.Run("unset flags stay omitted from the request body", func(t *testing.T) {
 		var body map[string]json.RawMessage
 		var decodeErr error
@@ -500,6 +535,40 @@ func TestDevicesUpdateSendsDeferredFlags(t *testing.T) {
 			t.Fatalf("expected request body ddns_status=0, got: %+v", body)
 		}
 		for _, key := range []string{"legacy_ipv4_status", "ddns_subdomain", "ddns_ext_status", "ddns_ext_host"} {
+			if _, ok := body[key]; ok {
+				t.Fatalf("expected request body to omit %q, got: %+v", key, body)
+			}
+		}
+	})
+
+	t.Run("explicit false legacy and external DDNS statuses are sent", func(t *testing.T) {
+		var body map[string]json.RawMessage
+		var decodeErr error
+		_, stderr, code := executeCommand(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				decodeErr = err
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(deviceResponse))
+		}), []string{
+			"devices", "update",
+			"--device-id=dev1", "--legacy-ipv4-status=false", "--ddns-ext-status=false",
+			"--format=json",
+		})
+
+		if code != ax.ExitSuccess {
+			t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr)
+		}
+		if decodeErr != nil {
+			t.Fatalf("decode request body: %v", decodeErr)
+		}
+		for _, key := range []string{"legacy_ipv4_status", "ddns_ext_status"} {
+			got, ok := body[key]
+			if !ok || string(got) != "0" {
+				t.Fatalf("expected request body %s=0, got: %+v", key, body)
+			}
+		}
+		for _, key := range []string{"ddns_status", "ddns_subdomain", "ddns_ext_host"} {
 			if _, ok := body[key]; ok {
 				t.Fatalf("expected request body to omit %q, got: %+v", key, body)
 			}

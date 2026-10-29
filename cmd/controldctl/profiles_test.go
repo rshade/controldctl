@@ -393,4 +393,38 @@ func TestProfilesUpdateSendsDeferredFlags(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("explicit zero disable_ttl and false lock_status are sent", func(t *testing.T) {
+		var body map[string]json.RawMessage
+		var decodeErr error
+		_, stderr, code := executeCommand(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				decodeErr = err
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(profileResponse))
+		}), []string{
+			"profiles", "update",
+			"--profile-id=p1", "--disable-ttl=0", "--lock-status=false",
+			"--format=json",
+		})
+
+		if code != ax.ExitSuccess {
+			t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr)
+		}
+		if decodeErr != nil {
+			t.Fatalf("decode request body: %v", decodeErr)
+		}
+		for _, key := range []string{"disable_ttl", "lock_status"} {
+			got, ok := body[key]
+			if !ok || string(got) != "0" {
+				t.Fatalf("expected request body %s=0, got: %+v", key, body)
+			}
+		}
+		for _, key := range []string{"lock_message", "password"} {
+			if _, ok := body[key]; ok {
+				t.Fatalf("expected request body to omit %q, got: %+v", key, body)
+			}
+		}
+	})
 }

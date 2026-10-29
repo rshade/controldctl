@@ -347,10 +347,41 @@ func TestProfilesRulesCreateSendsDeferredFlags(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("explicit zero group is sent", func(t *testing.T) {
+		var body map[string]json.RawMessage
+		var decodeErr error
+		_, stderr, code := executeCommand(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				decodeErr = err
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"success": true, "body": {"rules": [{"do": 0, "status": 1, "order": 1, "group": 0}]}}`))
+		}), []string{
+			"profiles", "rules", "create",
+			"--profile-id=p1", "--hostnames=example.com", "--group=0",
+			"--format=json",
+		})
+
+		if code != ax.ExitSuccess {
+			t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr)
+		}
+		if decodeErr != nil {
+			t.Fatalf("decode request body: %v", decodeErr)
+		}
+		if got, ok := body["group"]; !ok || string(got) != "0" {
+			t.Fatalf("expected request body group=0, got: %+v", body)
+		}
+		for _, key := range []string{"via", "via_v6"} {
+			if _, ok := body[key]; ok {
+				t.Fatalf("expected request body to omit %q, got: %+v", key, body)
+			}
+		}
+	})
 }
 
 func TestProfilesRulesUpdateSendsDeferredFlags(t *testing.T) {
-	t.Run("--via/--group are sent in the request body", func(t *testing.T) {
+	t.Run("--via/--via-v6/--group are sent in the request body", func(t *testing.T) {
 		var body map[string]json.RawMessage
 		var decodeErr error
 		_, stderr, code := executeCommand(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -362,7 +393,7 @@ func TestProfilesRulesUpdateSendsDeferredFlags(t *testing.T) {
 		}), []string{
 			"profiles", "rules", "update",
 			"--profile-id=p1", "--hostnames=example.com",
-			"--do=1", "--enabled=true", "--via=10.0.0.1", "--group=7", "--format=json",
+			"--do=1", "--enabled=true", "--via=10.0.0.1", "--via-v6=fd00::1", "--group=7", "--format=json",
 		})
 
 		if code != ax.ExitSuccess {
@@ -371,14 +402,19 @@ func TestProfilesRulesUpdateSendsDeferredFlags(t *testing.T) {
 		if decodeErr != nil {
 			t.Fatalf("decode request body: %v", decodeErr)
 		}
-		if got, ok := body["via"]; !ok || string(got) != `"10.0.0.1"` {
-			t.Fatalf("expected request body via=\"10.0.0.1\", got: %+v", body)
+		want := map[string]string{
+			"via":    `"10.0.0.1"`,
+			"via_v6": `"fd00::1"`,
+			"group":  "7",
 		}
-		if got, ok := body["group"]; !ok || string(got) != "7" {
-			t.Fatalf("expected request body group=7, got: %+v", body)
-		}
-		if _, ok := body["via_v6"]; ok {
-			t.Fatalf("expected request body to omit \"via_v6\", got: %+v", body)
+		for key, wantRaw := range want {
+			got, ok := body[key]
+			if !ok {
+				t.Fatalf("expected request body to contain %q, got: %+v", key, body)
+			}
+			if string(got) != wantRaw {
+				t.Fatalf("request body %q = %s, want %s", key, got, wantRaw)
+			}
 		}
 	})
 
@@ -403,6 +439,37 @@ func TestProfilesRulesUpdateSendsDeferredFlags(t *testing.T) {
 			t.Fatalf("decode request body: %v", decodeErr)
 		}
 		for _, key := range []string{"via", "via_v6", "group"} {
+			if _, ok := body[key]; ok {
+				t.Fatalf("expected request body to omit %q, got: %+v", key, body)
+			}
+		}
+	})
+
+	t.Run("explicit zero group is sent", func(t *testing.T) {
+		var body map[string]json.RawMessage
+		var decodeErr error
+		_, stderr, code := executeCommand(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				decodeErr = err
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"success": true, "body": {"rules": [{"do": 0, "status": 0, "order": 1, "group": 0}]}}`))
+		}), []string{
+			"profiles", "rules", "update",
+			"--profile-id=p1", "--hostnames=example.com",
+			"--do=0", "--enabled=false", "--group=0", "--format=json",
+		})
+
+		if code != ax.ExitSuccess {
+			t.Fatalf("exit code = %d, want %d; stderr=%s", code, ax.ExitSuccess, stderr)
+		}
+		if decodeErr != nil {
+			t.Fatalf("decode request body: %v", decodeErr)
+		}
+		if got, ok := body["group"]; !ok || string(got) != "0" {
+			t.Fatalf("expected request body group=0, got: %+v", body)
+		}
+		for _, key := range []string{"via", "via_v6"} {
 			if _, ok := body[key]; ok {
 				t.Fatalf("expected request body to omit %q, got: %+v", key, body)
 			}
