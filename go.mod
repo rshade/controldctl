@@ -53,4 +53,4 @@ require (
 	google.golang.org/protobuf v1.36.12 // indirect
 )
 
-replace github.com/baptistecdr/controld-go => github.com/rshade/controld-go v0.0.0-20261028230926-59e7e774ad7e
+replace github.com/baptistecdr/controld-go => github.com/rshade/controld-go v0.0.0-20261021051239-a5cccb5c2737
