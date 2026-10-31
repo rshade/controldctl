@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/rshade/controldctl/compare/v0.1.0...v0.1.1) (2026-10-31)
+
+
+### Fixed
+
+* **deps:** update module github.com/baptistecdr/controld-go to v0.0.14 ([#40](https://github.com/rshade/controldctl/issues/40)) ([4a09474](https://github.com/rshade/controldctl/commit/4a09474ff3cb06cf772a00338ac3e570197e327c))
+
 ## 0.1.0 (2026-10-29)
 
 
