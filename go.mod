@@ -15,7 +15,7 @@ require (
 	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/goccy/go-json v0.11.2 // indirect
+	github.com/goccy/go-json v0.12.0 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/google/jsonschema-go v0.4.3 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -53,4 +53,4 @@ require (
 	google.golang.org/protobuf v1.36.12 // indirect
 )
 
-replace github.com/baptistecdr/controld-go => github.com/rshade/controld-go v0.0.0-20261028230926-59e7e774ad7e
+replace github.com/baptistecdr/controld-go => github.com/rshade/controld-go v0.0.0-20261122024144-54ad824ef20a
